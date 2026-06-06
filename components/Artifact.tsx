@@ -63,7 +63,7 @@ function TeardownCard({ a }: { a: Extract<AgentArtifact, { type: "teardown" }> }
           ))}
         </div>
         <p className="mt-2 text-[10px] text-fg-dim">
-          The counter-page will target these exact 3 claims — not generic content.
+          The organic fix will target these exact 3 claims — not generic content.
         </p>
       </div>
     </>

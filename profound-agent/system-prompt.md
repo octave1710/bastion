@@ -28,8 +28,10 @@ LOOP, per cycle:
 6. SELF-EVAL — draft counter-content that rebuts the exact extracted claims with
    citable evidence. Score it head-to-head vs the competitor on each claim. If it
    scores below 8.0/10, REVISE and re-score. Only ship above threshold.
-7. ACT — emit a paid bid recommendation (recommend-only, never auto-spend), publish
-   the organic counter-page, and post a Slack alert so a human stays in the loop.
+7. ACT — emit a paid bid recommendation on the ad node matching the attacked engine
+   (ChatGPT loss → OpenAI Ads; Google loss → Google Ads), recommend-only and
+   auto-stopping when organic goes green; UPDATE the existing cited page if we
+   already rank (else CREATE), staged for human approval; and post a Slack alert.
 
 GUARDRAILS:
 - Never recommend spend on a position below the value threshold.

@@ -33,11 +33,21 @@
 > portfolio by ROI** — defends the valuable ones, and **skips** the ones that cost
 > more than they're worth. Judgment, not blind action."
 >
-> "The core insight: **paid is a temporary bridge, organic is the permanent win.**
-> $2,700 of paid holds the position for ~8 days while the organic counter-page ranks
-> — then paid tapers to zero. It drafts that page, and **grades its own work**: first
-> draft 6.8, below the bar — it **revises** — 8.4, beats them 3/3, ship. Bid rec,
-> counter-page, Slack alert. It **acts.**"
+> "Now the differentiator — **paid is a temporary bridge, organic is the permanent
+> win**, and it runs **both at once on one position**. We lost the citation *inside
+> ChatGPT*, so the paid bridge is an **OpenAI Ads** campaign — the same surface — $340/day,
+> auto-stops the moment organic goes green. Meanwhile organic: we're *already cited*,
+> so it **UPDATES the existing page** (faster than a new one) with a 3-block patch.
+> The math: **$2,700 of paid protects ~$26,000 of revenue during the 8-day reconquest —
+> ~10× — then we stop paying.** Most builders do organic only. This is the moat."
+>
+> "And it **grades its own work**: first draft 6.8, below the bar — it **revises** —
+> 8.4, beats them 3/3, ship. Patch staged for human approval, OpenAI Ads rec, Slack
+> alert. It **acts** — never auto-publishes, never auto-spends."
+>
+> *(Optional flex: edit a number in the economics panel — "this is OUR model; tune
+> click-through or ACV to your business and every valuation rerates live. Profound
+> gives you visibility; we add the dollar layer.")*
 
 **(65–85s) The payoff.**
 > "Share recovers. The cell goes green. Revenue at Risk back to **zero**. Defended

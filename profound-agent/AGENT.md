@@ -32,9 +32,13 @@ The War Room can **execute** this agent live via `POST /api/profound/agent`
    extracted claims; score it head-to-head vs the competitor; if < 8.0/10, revise
    and re-score; only ship above threshold.
 6. **Act** —
-   - **Google Ads / OpenAI Ads node**: emit a paid-bridge bid recommendation
-     (recommend-only — never auto-spends).
-   - **Content node**: publish the organic counter-page.
+   - **Ad node matched to the attacked surface**: loss in ChatGPT → **OpenAI Ads**;
+     loss on Google / AI Overviews → **Google Ads**. Emit a paid-bridge bid
+     recommendation (recommend-only — never auto-spends; auto-stops when organic
+     share goes green).
+   - **Content node**: **UPDATE** the existing cited page if we already rank
+     (faster reconquest) else **CREATE** a new one — staged for human approval,
+     never auto-published.
    - **Slack node**: post to `#aeo-war-room` so a human stays in the loop.
 
 ## System prompt
