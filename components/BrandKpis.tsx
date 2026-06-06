@@ -8,7 +8,7 @@ export interface BrandKpiData {
   avgPosition: number;
   rank: number;
   fieldSize: number;
-  competitors: { name: string; vis: number }[];
+  competitors: { name: string; vis?: number; count?: number }[];
 }
 
 // The HONEST headline: real Profound metrics for the brand, not an invented $.
@@ -43,14 +43,14 @@ export function BrandKpis({ kpis, live }: { kpis: BrandKpiData; live: boolean })
       />
       <div className="bg-bg-panel px-5 py-5">
         <div className="flex items-center justify-between">
-          <span className="eyebrow">Ahead of you</span>
+          <span className="eyebrow">Taking your citations</span>
           {live && <span className="eyebrow text-green">● live</span>}
         </div>
         <div className="mt-2.5 space-y-1">
           {kpis.competitors.slice(0, 3).map((c) => (
             <div key={c.name} className="flex items-center justify-between text-[12px]">
-              <span className="text-fg/80">{c.name}</span>
-              <span className="tnum text-red">{c.vis.toFixed(2)}</span>
+              <span className="text-fg/90">{c.name}</span>
+              <span className="tnum text-red">{c.count != null ? `${c.count} prompts` : c.vis?.toFixed(2)}</span>
             </div>
           ))}
         </div>

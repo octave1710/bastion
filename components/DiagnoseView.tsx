@@ -25,14 +25,20 @@ export function DiagnoseView({
   profoundUrl?: string;
   onExecute: () => void;
 }) {
-  const { gaps, winnable } = useMemo(() => {
+  const { gaps, winnable, threats } = useMemo(() => {
     const gaps = prompts
       .filter((p) => p.status !== "winning")
       .sort((a, b) => b.annualValue - a.annualValue)
       .slice(0, 12);
     const winnable = gaps.reduce((a, p) => a + p.annualValue * Math.max(0, 0.45 - p.shareOfAnswer), 0);
-    return { gaps, winnable };
+    // Who actually takes our citations across the prompts (consistent with the table).
+    const counts = new Map<string, number>();
+    prompts.filter((p) => p.leader && p.leader !== "us").forEach((p) => counts.set(String(p.leader), (counts.get(String(p.leader)) ?? 0) + 1));
+    const threats = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, count]) => ({ name, count }));
+    return { gaps, winnable, threats };
   }, [prompts]);
+
+  const kpisDisplay = threats.length ? { ...brandKpis, competitors: threats } : brandKpis;
 
   const [open, setOpen] = useState<string | null>(null);
   const [teardowns, setTeardowns] = useState<Record<string, Teardown | "loading">>({});
@@ -58,7 +64,7 @@ export function DiagnoseView({
           <span className="eyebrow text-fg-muted">{brand} · AI visibility in &ldquo;Frontier Models&rdquo;</span>
           <span className="eyebrow text-fg-dim">real Profound metrics</span>
         </div>
-        <BrandKpis kpis={brandKpis} live={live} />
+        <BrandKpis kpis={kpisDisplay} live={live} />
       </div>
 
       {/* The gaps — where we lose, ranked by winnable opportunity */}
