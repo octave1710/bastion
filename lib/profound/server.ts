@@ -164,7 +164,8 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
     const competitors = brandStats.filter((r) => !r.ours).slice(0, 4).map((r) => ({ name: r.name, vis: Math.round(r.vis * 100) / 100 }));
     const brandKpis: BrandKpis = {
       shareOfVoice: ourVis / totalVis,
-      visibilityScore: Math.round(ourVis * 100) / 100,
+      // single representative brand score (not summed) so the ranking is honest.
+      visibilityScore: oursRows.length ? Math.round(Math.max(...oursRows.map((r) => r.vis)) * 100) / 100 : 0,
       avgPosition: oursRows.length ? Math.round((oursRows.reduce((a, r) => a + r.pos, 0) / oursRows.length) * 10) / 10 : 0,
       rank: ourRank || brandStats.length,
       fieldSize: brandStats.length,

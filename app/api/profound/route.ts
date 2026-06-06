@@ -14,7 +14,7 @@ const PROFOUND_APP_URL = process.env.PROFOUND_APP_URL?.trim() || "https://platfo
 // even offline the headline reflects truth, not invention.
 const DEMO_BRAND_KPIS = {
   shareOfVoice: 0.232,
-  visibilityScore: 7.96,
+  visibilityScore: 3.99,
   avgPosition: 0.5,
   rank: 4,
   fieldSize: 8,

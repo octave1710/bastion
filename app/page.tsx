@@ -12,7 +12,7 @@ import { type BrandKpiData } from "@/components/BrandKpis";
 
 const DEMO_KPIS: BrandKpiData = {
   shareOfVoice: 0.232,
-  visibilityScore: 7.96,
+  visibilityScore: 3.99,
   avgPosition: 0.5,
   rank: 4,
   fieldSize: 8,

@@ -120,13 +120,14 @@ export function ExecuteView({ prompts, brandKpis, brand }: { prompts: Prompt[]; 
         </div>
         <div className="px-4 py-4 grid grid-cols-1 md:grid-cols-[1.5fr_1fr_1.1fr] gap-5 items-center">
           <div>
-            <div className="flex items-center justify-between text-[12px] mb-1.5">
-              <span className="text-blue font-semibold">◆ PAID ADS BUDGET</span>
+            <div className="flex items-center justify-between text-[12px] mb-1">
+              <span className="text-blue font-semibold">◆ HOW MUCH TO SPEND ON ADS / DAY</span>
               <span className="tnum text-blue text-lg">{fmtUSD(budget)}<span className="text-fg-muted text-xs">/day</span></span>
             </div>
+            <div className="text-[10px] text-fg-dim mb-1.5">ads buy the top spot NOW while your free content climbs the rankings</div>
             <input type="range" min={0} max={6000} step={250} value={budget} onChange={(e) => setBudget(Number(e.target.value))} className="w-full accent-blue" disabled={running} />
             <div className="text-[11px] text-fg-muted mt-1">
-              funds <span className="text-blue font-medium">{preview.paidPrompts.length} paid bridges</span> · the rest win via <span className="text-violet font-medium">organic content</span>
+              this budget runs ads on <span className="text-blue font-medium">{preview.paidPrompts.length} prompts</span> now · all others win for free with <span className="text-violet font-medium">content</span>
               {finished && <span className="text-amber"> · re-run to apply</span>}
             </div>
           </div>
@@ -195,12 +196,12 @@ function PaidOrganicAutopilot({ plan }: { plan: Plan }) {
   return (
     <div className="bg-bg-panel border border-border panel-elev rounded-sm overflow-hidden">
       <div className="px-4 py-2.5 border-b border-border bg-bg-elev flex items-center justify-between">
-        <span className="eyebrow text-fg-muted">Paid ↔ Organic Autopilot · the agent cuts paid as organic ranks</span>
+        <span className="eyebrow text-fg-muted">Ads now, free content later · the agent turns ads OFF once your content wins</span>
         <span className="eyebrow text-amber">$ illustrative</span>
       </div>
       <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-[1.6fr_1fr] gap-5 items-center">
         <div>
-          <div className="flex items-center justify-between text-[10px] text-fg-dim mb-1"><span>Day 0 — paid holds the position</span><span>Day {days} — organic ranks, paid → $0</span></div>
+          <div className="flex items-center justify-between text-[10px] text-fg-dim mb-1"><span>Day 0 — ads hold your #1 spot</span><span>Day {days} — content ranks, ads turn off</span></div>
           <div className="flex gap-[3px] items-end h-16">
             {Array.from({ length: days + 1 }, (_, i) => {
               const paid = Math.max(0, 1 - i / days);
@@ -214,15 +215,15 @@ function PaidOrganicAutopilot({ plan }: { plan: Plan }) {
             })}
           </div>
           <div className="flex items-center gap-4 mt-2 text-[10px]">
-            <span className="text-blue">■ paid bridge (temporary)</span>
-            <span className="text-violet">■ organic (permanent)</span>
+            <span className="text-blue">■ ads (you pay, temporary)</span>
+            <span className="text-violet">■ content (free, permanent)</span>
           </div>
         </div>
         <div className="text-[12px] space-y-1.5">
-          <div className="flex justify-between"><span className="text-fg-muted">Bridge cost ({days} days)</span><span className="tnum text-blue">{fmtUSD(bridgeCost)}</span></div>
-          <div className="flex justify-between"><span className="text-fg-muted">Paid saved /mo once organic ranks</span><span className="tnum text-green">{compactUSD(monthlySaved)}</span></div>
-          <div className="flex justify-between border-t border-border pt-1.5"><span className="text-fg">Net saved /yr by switching to organic</span><span className="tnum text-green font-semibold">{compactUSD(annualSaved)}</span></div>
-          <p className="text-[10px] text-fg-dim pt-1">The agent monitors organic recovery on Profound and auto-tapers the campaign — you stop paying once you own the answer.</p>
+          <div className="flex justify-between"><span className="text-fg-muted">Ad spend for the {days}-day ramp</span><span className="tnum text-blue">{fmtUSD(bridgeCost)}</span></div>
+          <div className="flex justify-between"><span className="text-fg-muted">Ad spend you stop paying after</span><span className="tnum text-green">{compactUSD(monthlySaved)}/mo</span></div>
+          <div className="flex justify-between border-t border-border pt-1.5"><span className="text-fg">Saved /yr by winning with content</span><span className="tnum text-green font-semibold">{compactUSD(annualSaved)}</span></div>
+          <p className="text-[10px] text-fg-dim pt-1">Profound shows when your content starts ranking — the agent automatically turns the ads off. You stop paying once you own the answer for free.</p>
         </div>
       </div>
     </div>
