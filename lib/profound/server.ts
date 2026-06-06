@@ -59,11 +59,21 @@ function statusFor(share: number, leader: string): PromptStatus {
   return "contested";
 }
 
+export interface BrandKpis {
+  shareOfVoice: number; // 0–1, our citations ÷ field
+  visibilityScore: number; // Profound visibility score
+  avgPosition: number; // average citation position
+  rank: number; // our rank in the category
+  fieldSize: number; // number of competitors tracked
+  competitors: { name: string; vis: number }[]; // leaders ahead of us
+}
+
 export interface LivePortfolio {
   source: "live";
   brand: string;
   categoryId: string;
   prompts: Prompt[];
+  brandKpis: BrandKpis;
 }
 
 // In-memory cache — the per-asset citation pull is heavy (10k rows). 5-min TTL
@@ -99,7 +109,7 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
     //  - per-prompt heat: mentions_count + visibility_score (dims=[prompt])
     //  - assets (id → name; which ids are ours)
     //  - real share of answer: citations by [prompt, asset_id] → Claude ÷ field
-    const [promptListRaw, heatRows, assetList, shareRows] = await Promise.all([
+    const [promptListRaw, heatRows, assetList, shareRows, brandRows] = await Promise.all([
       (client as any).organizations.categories.prompts(categoryId).then(rows).catch(() => [] as any[]),
       (client as any).reports
         .visibility({ category_id: categoryId, ...win, metrics: ["mentions_count", "visibility_score"], dimensions: ["prompt"] })
@@ -108,6 +118,11 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
       (client as any).organizations.listAssets(categoryId).then(rows).catch(() => [] as any[]),
       (client as any).reports
         .visibility({ category_id: categoryId, ...win, metrics: ["visibility_score"], dimensions: ["prompt", "asset_id"] })
+        .then(rows)
+        .catch(() => [] as any[]),
+      // Brand-level KPIs (the honest headline): visibility + position per asset.
+      (client as any).reports
+        .visibility({ category_id: categoryId, ...win, metrics: ["visibility_score", "average_position"], dimensions: ["asset_id"] })
         .then(rows)
         .catch(() => [] as any[]),
     ]);
@@ -131,6 +146,30 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
       if (id) idToName.set(id, name);
       if (["claude", "anthropic"].includes(norm(name))) ourIds.add(id);
     }
+
+    // ── Brand-level KPIs (the honest headline, real from Profound) ──────────
+    const isUuidId = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
+    type BrandStat = { name: string; vis: number; pos: number; ours: boolean };
+    const brandMapped: BrandStat[] = brandRows.map((r: any): BrandStat => {
+      const id = String((r.dimensions || []).find((d: string) => isUuidId(d)) ?? r.dimensions?.[0]);
+      return { name: idToName.get(id) || id, vis: Number(r.metrics?.[0] ?? 0), pos: Number(r.metrics?.[1] ?? 0), ours: ourIds.has(id) };
+    });
+    const brandStats = brandMapped
+      .filter((r) => r.name && !/^0{8}-/.test(r.name) && r.vis > 0)
+      .sort((a, b) => b.vis - a.vis);
+    const totalVis = brandStats.reduce((a, r) => a + r.vis, 0) || 1;
+    const oursRows = brandStats.filter((r) => r.ours);
+    const ourVis = oursRows.reduce((a, r) => a + r.vis, 0);
+    const ourRank = brandStats.findIndex((r) => r.ours) + 1;
+    const competitors = brandStats.filter((r) => !r.ours).slice(0, 4).map((r) => ({ name: r.name, vis: Math.round(r.vis * 100) / 100 }));
+    const brandKpis: BrandKpis = {
+      shareOfVoice: ourVis / totalVis,
+      visibilityScore: Math.round(ourVis * 100) / 100,
+      avgPosition: oursRows.length ? Math.round((oursRows.reduce((a, r) => a + r.pos, 0) / oursRows.length) * 10) / 10 : 0,
+      rank: ourRank || brandStats.length,
+      fieldSize: brandStats.length,
+      competitors,
+    };
 
     // Real share of answer = (Claude + Anthropic) citations ÷ total for the prompt.
     // The [prompt, asset_id] rows are positional; detect which value is the prompt.
@@ -186,7 +225,7 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
       };
     });
 
-    const data: LivePortfolio = { source: "live", brand, categoryId, prompts };
+    const data: LivePortfolio = { source: "live", brand, categoryId, prompts, brandKpis };
     _cache = { at: Date.now(), data };
     return data;
   } catch (err) {

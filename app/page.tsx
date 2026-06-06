@@ -7,6 +7,7 @@ import { buildCuratedPrompts, buildPortfolio, ATTACKER, BRAND, HERO_PROMPT, HERO
 import type { Prompt } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
 import { Tabs, type View } from "@/components/Tabs";
+import { BrandKpis, type BrandKpiData } from "@/components/BrandKpis";
 import { Metrics } from "@/components/Metrics";
 import { PromptGrid } from "@/components/PromptGrid";
 import { AgentConsole } from "@/components/AgentConsole";
@@ -20,11 +21,25 @@ import { DefendedLog, type DefenseEntry } from "@/components/DefendedLog";
 import { DEFAULT_POLICY, type Policy } from "@/lib/policy";
 import { compactUSD } from "@/lib/economics";
 
+const DEMO_KPIS: BrandKpiData = {
+  shareOfVoice: 0.232,
+  visibilityScore: 7.96,
+  avgPosition: 0.5,
+  rank: 4,
+  fieldSize: 8,
+  competitors: [
+    { name: "Grok", vis: 5.52 },
+    { name: "xAI", vis: 5.5 },
+    { name: "Gemini", vis: 4.64 },
+  ],
+};
+
 interface DataSource {
   source: "demo" | "live";
   brand: string;
   count: number;
   prompts: Prompt[];
+  brandKpis: BrandKpiData;
   profoundUrl?: string;
 }
 
@@ -55,7 +70,7 @@ export default function WarRoom() {
       ]);
     }
   }, [state.phase]);
-  const [data, setData] = useState<DataSource>({ source: "demo", brand: "Anthropic", count: 2400, prompts: [] });
+  const [data, setData] = useState<DataSource>({ source: "demo", brand: "Anthropic", count: 2400, prompts: [], brandKpis: DEMO_KPIS });
   const [view, setView] = useState<View>("warroom");
   const [policy, setPolicy] = useState<Policy>(DEFAULT_POLICY);
 
@@ -80,6 +95,7 @@ export default function WarRoom() {
           brand: d.brand || "Anthropic",
           count: Array.isArray(d.prompts) ? d.prompts.length : 2400,
           prompts: Array.isArray(d.prompts) ? d.prompts : [],
+          brandKpis: d.brandKpis || DEMO_KPIS,
           profoundUrl: d.profoundUrl,
         });
       })
@@ -186,13 +202,28 @@ export default function WarRoom() {
       </AnimatePresence>
 
       <main className="flex-1 px-6 py-5 grid grid-cols-1 xl:grid-cols-[1.55fr_1fr] gap-5">
-        {/* LEFT: metrics + the live grid */}
+        {/* LEFT: honest KPIs + the live grid */}
         <div className="flex flex-col gap-5 min-w-0">
-          <Metrics
-            defendedMonthly={state.defendedMonthly}
-            revenueAtRisk={state.revenueAtRisk}
-            phase={state.phase}
-          />
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="eyebrow text-fg-muted">
+                {data.brand} · AI visibility in &ldquo;Frontier Models&rdquo;
+              </span>
+              <span className="eyebrow text-fg-dim">real Profound metrics</span>
+            </div>
+            <BrandKpis kpis={data.brandKpis} live={data.source === "live"} />
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <span className="eyebrow text-fg-muted">Revenue model · the $ layer on top</span>
+              <span className="eyebrow text-amber">illustrative estimate · adjustable</span>
+            </div>
+            <Metrics
+              defendedMonthly={state.defendedMonthly}
+              revenueAtRisk={state.revenueAtRisk}
+              phase={state.phase}
+            />
+          </div>
           <div className="flex flex-col gap-2 min-h-0">
             <div className="flex items-center justify-between">
               <span className="eyebrow text-fg-muted">
