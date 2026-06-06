@@ -78,17 +78,15 @@ export function Topbar({
             {live ? "Profound · live" : "demo data"}
           </span>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs">
-          <span className="eyebrow text-fg-dim">Brand</span>
-          <span className="text-fg/90 font-medium">{brand}</span>
-          {live && category && (
-            <span
-              className="ml-1 text-[10px] text-fg-dim border-l border-border-strong pl-2"
-              title="Live Profound category powering this view"
-            >
-              category · <span className="text-fg-muted">{category}</span>
-            </span>
-          )}
+        {/* Prominent brand lockup — the brand we defend. */}
+        <div className="flex items-center gap-2.5 px-2.5 py-1 rounded-md border border-border-strong bg-bg-elev">
+          <ClaudeMark />
+          <div className="leading-tight">
+            <div className="text-[13px] font-semibold text-fg">{brand}</div>
+            <div className="eyebrow !text-[8px] text-fg-dim">
+              defending {live && category ? `· ${category}` : "brand"}
+            </div>
+          </div>
         </div>
         <div
           className={`flex items-center gap-2 text-xs px-2.5 py-1 rounded ${
@@ -101,22 +99,36 @@ export function Topbar({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={onRun}
-            disabled={running}
-            className="px-4 py-1.5 rounded text-sm font-semibold bg-green text-bg hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed transition"
-          >
-            {running ? "● Running…" : "▶ Run Demo"}
-          </button>
-          <button
-            onClick={onReset}
-            className="px-3 py-1.5 rounded text-sm font-medium border border-border-strong text-fg-muted hover:text-fg hover:border-fg-dim transition"
-          >
-            Reset
-          </button>
-        </div>
+        <button
+          onClick={running ? onReset : onRun}
+          className="px-4 py-1.5 rounded text-sm font-semibold bg-green text-bg hover:brightness-110 transition"
+        >
+          {running ? "● Running… (click to stop)" : "▶ Run Demo"}
+        </button>
       </div>
     </header>
+  );
+}
+
+// Claude's mark — radial burst. Makes the defended brand instantly recognizable.
+function ClaudeMark() {
+  const lines = Array.from({ length: 12 }, (_, i) => {
+    const a = (i * Math.PI) / 6;
+    const r1 = 2.5, r2 = 8;
+    return {
+      x1: 10 + Math.cos(a) * r1,
+      y1: 10 + Math.sin(a) * r1,
+      x2: 10 + Math.cos(a) * r2,
+      y2: 10 + Math.sin(a) * r2,
+    };
+  });
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" className="shrink-0" aria-label="Anthropic / Claude">
+      <g stroke="#D97757" strokeWidth="1.5" strokeLinecap="round">
+        {lines.map((l, i) => (
+          <line key={i} x1={l.x1} y1={l.y1} x2={l.x2} y2={l.y2} />
+        ))}
+      </g>
+    </svg>
   );
 }

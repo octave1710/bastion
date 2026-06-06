@@ -34,7 +34,9 @@ export function LeversView({
       {/* ROI ledger — CFO-grade */}
       <div>
         <div className="flex items-center justify-between mb-2">
-          <span className="eyebrow text-fg-muted">ROI ledger · the dollar outcome</span>
+          <span className="eyebrow text-fg-muted">
+            ROI ledger <span className="text-amber">· illustrative $ model (volume × CTR × conv × ACV) — not a measurement</span>
+          </span>
           <SendAlert
             getMessage={() =>
               `🛡 *Bastion digest* — defending ${compactUSD(ledger.defended)}/yr across ${ledger.counts.defend} positions.\n` +

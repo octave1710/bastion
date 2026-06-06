@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Prompt } from "@/lib/types";
 import { buildPortfolio } from "@/lib/data";
 import { decide, DEFAULT_POLICY, type Policy } from "@/lib/policy";
 import { squarify } from "@/lib/treemap";
 import { compactUSD, fmtInt } from "@/lib/economics";
+import { AnimatedNumber } from "./AnimatedNumber";
 
 // Colour by the agent's DECISION, not raw win/loss — this is a "defended
 // continuously" view, so it shows coverage: held, ranking, bridged, or skipped.
@@ -36,7 +37,7 @@ export function ScaleReveal({
     [prompts]
   );
 
-  const { rects, stats, movers, decisions, decStatus } = useMemo(() => {
+  const { rects, stats, movers, allDecisions, decStatus } = useMemo(() => {
     const items = portfolio.map((p) => ({ value: Math.max(p.annualValue, 1), data: p }));
     const rects = squarify(items, 100, 58);
     const value = portfolio.reduce((a, p) => a + p.annualValue, 0);
@@ -49,9 +50,27 @@ export function ScaleReveal({
       stats: { total: portfolio.length, winning, value, defended: ds.filter((d) => d.defend).length },
       movers,
       decisions: ds.slice(0, 14),
+      allDecisions: ds,
       decStatus,
     };
   }, [portfolio, policy]);
+
+  // Streaming feed — a new decision scrolls in every ~450ms so it reads as live.
+  const [feedLen, setFeedLen] = useState(0);
+  useEffect(() => {
+    if (!open) { setFeedLen(0); return; }
+    const id = setInterval(() => setFeedLen((n) => n + 1), 450);
+    return () => clearInterval(id);
+  }, [open]);
+  const stream = useMemo(() => {
+    const all = allDecisions;
+    if (!all.length) return [];
+    const n = Math.min(12, feedLen);
+    return Array.from({ length: n }, (_, i) => {
+      const idx = (feedLen - 1 - i) % all.length;
+      return { d: all[(idx + all.length) % all.length], seq: feedLen - i };
+    });
+  }, [allDecisions, feedLen]);
 
   if (!open) return null;
 
@@ -66,10 +85,13 @@ export function ScaleReveal({
       <div className="flex items-center justify-between px-7 py-4 border-b border-border">
         <div>
           <div className="eyebrow text-green">● the portfolio · defended continuously</div>
-          <h2 className="mt-1 text-2xl font-semibold">
-            <span className="tnum text-green">{compactUSD(stats.value)}/yr</span> defended ·{" "}
-            <span className="tnum">{fmtInt(stats.total)}</span> positions ·{" "}
-            <span className="tnum text-green">{fmtInt(stats.winning)}</span> winning
+          <h2 className="mt-1 text-2xl font-semibold flex items-baseline gap-1.5">
+            <AnimatedNumber value={stats.value} format={(n) => compactUSD(n)} durationMs={1400} className="tnum text-green glow-green" />
+            <span className="text-fg-muted text-lg">/yr defended ·</span>
+            <AnimatedNumber value={stats.total} format={(n) => fmtInt(n)} durationMs={1400} className="tnum" />
+            <span className="text-fg-muted text-lg">positions ·</span>
+            <AnimatedNumber value={stats.winning} format={(n) => fmtInt(n)} durationMs={1400} className="tnum text-green" />
+            <span className="text-fg-muted text-lg">winning</span>
           </h2>
         </div>
         <button
@@ -133,28 +155,32 @@ export function ScaleReveal({
 
           <div className="bg-bg-panel border border-border rounded-sm overflow-hidden flex-1 min-h-0 flex flex-col">
             <div className="px-3 py-2 border-b border-border bg-bg-elev flex items-center justify-between">
-              <span className="eyebrow text-fg-muted">Live decisions</span>
+              <span className="eyebrow text-fg-muted">Live decisions · streaming</span>
               <span className="h-1.5 w-1.5 rounded-full bg-green animate-pulse" />
             </div>
             <div className="p-1.5 flex-1 overflow-hidden">
-              {decisions.map((d, i) => (
-                <motion.div
-                  key={d.prompt.id}
-                  initial={{ opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.3 + i * 0.12 }}
-                  className="flex items-center gap-2 px-1.5 py-1 text-[11px] font-mono"
-                >
-                  <span className="text-fg-dim shrink-0">›</span>
-                  <span className="text-fg/80 truncate flex-1">{d.prompt.text}</span>
-                  <span
-                    className="shrink-0 text-[10px]"
-                    style={{ color: d.defend ? (d.lever === "paid+organic" ? "var(--blue)" : "var(--violet)") : "var(--fg-dim)" }}
+              <AnimatePresence initial={false} mode="popLayout">
+                {stream.map(({ d, seq }) => (
+                  <motion.div
+                    key={seq}
+                    layout
+                    initial={{ opacity: 0, x: 14, height: 0 }}
+                    animate={{ opacity: 1, x: 0, height: "auto" }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.28 }}
+                    className="flex items-center gap-2 px-1.5 py-1 text-[11px] font-mono"
                   >
-                    {d.defend ? (d.lever === "paid+organic" ? "DEFEND·paid" : "DEFEND·org") : "SKIP"}
-                  </span>
-                </motion.div>
-              ))}
+                    <span className="text-green shrink-0">›</span>
+                    <span className="text-fg/80 truncate flex-1">{d.prompt.text}</span>
+                    <span
+                      className="shrink-0 text-[10px]"
+                      style={{ color: d.defend ? (d.lever === "paid+organic" ? "var(--blue)" : "var(--violet)") : "var(--fg-dim)" }}
+                    >
+                      {d.defend ? (d.lever === "paid+organic" ? "DEFEND·paid" : "DEFEND·org") : "SKIP"}
+                    </span>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </div>
         </aside>

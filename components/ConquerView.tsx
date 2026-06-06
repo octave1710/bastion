@@ -40,8 +40,10 @@ export function ConquerView({ prompts, policy = DEFAULT_POLICY }: { prompts: Pro
 
       <div className="bg-bg-panel border border-border panel-elev rounded-sm overflow-hidden">
         <div className="px-4 py-2.5 border-b border-border bg-bg-elev flex items-center justify-between">
-          <span className="eyebrow text-fg-muted">Offense · prompts you&rsquo;re losing, ranked by winnable $</span>
-          <span className="eyebrow text-fg-dim">target share 45% · real Profound gaps</span>
+          <span className="eyebrow text-fg-muted">
+            Offense · prompts you&rsquo;re losing (real Profound share), ranked by winnable $
+          </span>
+          <span className="eyebrow text-amber">$ = illustrative estimate · share is real</span>
         </div>
         <div className="overflow-y-auto max-h-[560px]">
           <table className="w-full text-[12px]">
