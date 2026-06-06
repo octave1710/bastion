@@ -11,7 +11,7 @@ import type { AeoContent } from "./aeo-content";
 export interface BriefData {
   brand: string;
   dateLabel: string;
-  kpis: { shareOfVoice: number; visibilityScore: number; avgPosition: number; rank: number; fieldSize: number; competitors: { name: string; vis: number }[] };
+  kpis: { shareOfVoice: number; visibilityScore: number; avgPosition: number; rank: number; fieldSize: number; competitors: { name: string; vis?: number; count?: number }[] };
   gaps: { text: string; share: number; leader: string; value: number }[];
   content: { prompt: string; c: AeoContent }[];
   campaign: { keywords: number; daily: number; monthly: number; clicks: number };
