@@ -1,6 +1,7 @@
 import { generateContent } from "@/lib/generate-server";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 // A REAL, live, published AEO page — what the agent ships. Schema-marked so answer
 // engines structure and cite it. The slug is the slugified prompt, so these are

@@ -33,10 +33,13 @@ async function generateLive(prompt: string): Promise<AeoContent | null> {
   const key = process.env.OPENAI_API_KEY?.trim();
   if (!key) return null;
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 45_000); // never hang the function
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${key}` },
+      signal: ctrl.signal,
       body: JSON.stringify({
         model,
         temperature: 0.4,
@@ -47,6 +50,7 @@ async function generateLive(prompt: string): Promise<AeoContent | null> {
         ],
       }),
     });
+    clearTimeout(timer);
     if (!res.ok) return null;
     const data = await res.json();
     const raw = data?.choices?.[0]?.message?.content;

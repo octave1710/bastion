@@ -4,6 +4,7 @@ import { generateContent } from "@/lib/generate-server";
 // multi-channel distribution) for a prompt we're losing. Live OpenAI when keyed,
 // real-content fallback otherwise. Never scripted placeholder.
 export const dynamic = "force-dynamic";
+export const maxDuration = 60; // the full-kit generation can take >10s
 
 export async function POST(req: Request) {
   let prompt = "";
