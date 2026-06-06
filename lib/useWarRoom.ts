@@ -57,6 +57,22 @@ export function useWarRoom() {
     setState(INITIAL);
   }, [clearTimers]);
 
+  // Leave the scale view WITHOUT wiping the win: keep the reconquered position and
+  // the ticked-up defended revenue. The gains persist — it's not a one-shot reset.
+  const exitScale = useCallback(() => {
+    cancelled.current = true;
+    clearTimers();
+    setState((s) => ({
+      phase: "peacetime",
+      hero: s.hero === "reconquered" ? "reconquered" : "winning",
+      revealed: 0,
+      revenueAtRisk: 0,
+      defendedMonthly: s.defendedMonthly,
+      showScale: false,
+      running: false,
+    }));
+  }, [clearTimers]);
+
   const patch = useCallback((p: Partial<WarRoomState>) => {
     setState((s) => ({ ...s, ...p }));
   }, []);
@@ -103,5 +119,5 @@ export function useWarRoom() {
     patch({ phase: "scale", showScale: true, running: false });
   }, [clearTimers, patch, sleep]);
 
-  return { state, run, reset };
+  return { state, run, reset, exitScale };
 }

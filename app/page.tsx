@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWarRoom } from "@/lib/useWarRoom";
 import { buildCuratedPrompts, buildPortfolio, ATTACKER, BRAND, HERO_PROMPT, HERO_PROMPT_ID, SKIP_PROMPT } from "@/lib/data";
@@ -15,6 +15,7 @@ import { ScaleReveal } from "@/components/ScaleReveal";
 import { Ambiance } from "@/components/Ambiance";
 import { LeversView } from "@/components/LeversView";
 import { PortfolioView } from "@/components/PortfolioView";
+import { DefendedLog, type DefenseEntry } from "@/components/DefendedLog";
 import { compactUSD } from "@/lib/economics";
 
 interface DataSource {
@@ -26,8 +27,32 @@ interface DataSource {
 }
 
 export default function WarRoom() {
-  const { state, run, reset } = useWarRoom();
+  const { state, run, reset, exitScale } = useWarRoom();
   const curated = useMemo(() => buildCuratedPrompts(), []);
+
+  // Persistent proof: each completed defense is logged and SURVIVES Exit/replay.
+  const [log, setLog] = useState<DefenseEntry[]>([]);
+  const logIdRef = useRef(0);
+  const loggedThisRun = useRef(false);
+  useEffect(() => {
+    if (state.phase === "attack") loggedThisRun.current = false;
+    if (state.phase === "payoff" && !loggedThisRun.current) {
+      loggedThisRun.current = true;
+      setLog((l) => [
+        {
+          id: ++logIdRef.current,
+          prompt: HERO_PROMPT.text,
+          value: HERO_PROMPT.annualValue,
+          engine: "ChatGPT",
+          lever: "paid+organic",
+          shareBefore: 0.41,
+          shareDip: 0.23,
+          shareAfter: 0.38,
+        },
+        ...l,
+      ]);
+    }
+  }, [state.phase]);
   const [data, setData] = useState<DataSource>({ source: "demo", brand: "Anthropic", count: 2400, prompts: [] });
   const [view, setView] = useState<View>("warroom");
 
@@ -189,10 +214,11 @@ export default function WarRoom() {
 
         {/* RIGHT: agent console + economics */}
         <div className="flex flex-col gap-5 min-h-0">
-          <div className="h-[460px] min-h-0">
+          <div className="h-[420px] min-h-0">
             <AgentConsole revealed={state.revealed} />
           </div>
           <EconomicsPanel />
+          <DefendedLog entries={log} />
         </div>
       </main>
       </>
@@ -217,7 +243,7 @@ export default function WarRoom() {
       </footer>
       </div>
 
-      <ScaleReveal open={state.showScale} onClose={reset} />
+      <ScaleReveal open={state.showScale} onClose={exitScale} />
     </div>
   );
 }
