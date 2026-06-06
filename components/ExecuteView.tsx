@@ -8,6 +8,7 @@ import type { BrandKpiData } from "./BrandKpis";
 import { DEFAULT_POLICY } from "@/lib/policy";
 import { benchmarkCpc, buildCampaign, toGoogleAdsCsv, campaignTotals, type CampaignRow } from "@/lib/campaign";
 import { buildBriefHtml } from "@/lib/brief";
+import { Autopilot } from "./Autopilot";
 import { compactUSD, fmtUSD, fmtInt } from "@/lib/economics";
 
 interface Produced {
@@ -139,6 +140,9 @@ export function ExecuteView({ prompts, brandKpis, brand }: { prompts: Prompt[]; 
           </button>
         </div>
       </div>
+
+      {/* Feature 3 — continuous execution */}
+      <Autopilot prompts={prompts} />
 
       {finished && doneItems.length > 0 && (
         <>
