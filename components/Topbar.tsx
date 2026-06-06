@@ -17,6 +17,7 @@ export function Topbar({
   onReset,
   dataSource = "demo",
   brand = "Anthropic",
+  category,
   syncedCount = 2400,
 }: {
   phase: Phase;
@@ -25,6 +26,7 @@ export function Topbar({
   onReset: () => void;
   dataSource?: "demo" | "live";
   brand?: string;
+  category?: string;
   syncedCount?: number;
 }) {
   const live = dataSource === "live";
@@ -79,6 +81,14 @@ export function Topbar({
         <div className="hidden md:flex items-center gap-2 text-xs">
           <span className="eyebrow text-fg-dim">Brand</span>
           <span className="text-fg/90 font-medium">{brand}</span>
+          {live && category && (
+            <span
+              className="ml-1 text-[10px] text-fg-dim border-l border-border-strong pl-2"
+              title="Live Profound category powering this view"
+            >
+              category · <span className="text-fg-muted">{category}</span>
+            </span>
+          )}
         </div>
         <div
           className={`flex items-center gap-2 text-xs px-2.5 py-1 rounded ${

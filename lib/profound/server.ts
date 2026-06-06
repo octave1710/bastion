@@ -72,15 +72,15 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
   if (!client) return null;
 
   try {
-    // 1. Pick a category (env override or first available).
-    let categoryId = process.env.PROFOUND_CATEGORY_ID?.trim() || "";
-    let brand = "Your brand";
-    if (!categoryId) {
-      const cats = rows(await (client as any).organizations.categories.list());
-      if (!cats.length) return null;
-      categoryId = cats[0].id ?? cats[0].category_id;
-      brand = cats[0].name ?? cats[0].brand ?? brand;
-    }
+    // 1. Pick a category and always resolve its display name (even when the id
+    //    is pinned via env — otherwise the brand label would be missing).
+    const envCategoryId = process.env.PROFOUND_CATEGORY_ID?.trim() || "";
+    const cats = rows(await (client as any).organizations.categories.list());
+    if (!cats.length) return null;
+    const catId = (c: any) => String(c.id ?? c.category_id ?? "");
+    const chosen = envCategoryId ? cats.find((c: any) => catId(c) === envCategoryId) ?? cats[0] : cats[0];
+    const categoryId = catId(chosen);
+    const brand = chosen.name ?? chosen.brand ?? "Your brand";
     if (!categoryId) return null;
 
     // 2. Prompts in the category (text + id).

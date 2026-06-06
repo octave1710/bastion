@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWarRoom } from "@/lib/useWarRoom";
-import { buildCuratedPrompts, ATTACKER, HERO_PROMPT, SKIP_PROMPT } from "@/lib/data";
+import { buildCuratedPrompts, ATTACKER, BRAND, HERO_PROMPT, SKIP_PROMPT } from "@/lib/data";
 import { Topbar } from "@/components/Topbar";
 import { Metrics } from "@/components/Metrics";
 import { PromptGrid } from "@/components/PromptGrid";
@@ -92,7 +92,8 @@ export default function WarRoom() {
         onRun={run}
         onReset={reset}
         dataSource={data.source}
-        brand={data.brand}
+        brand={BRAND}
+        category={data.source === "live" ? data.brand : undefined}
         syncedCount={data.count}
       />
 
