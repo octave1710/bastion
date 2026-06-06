@@ -63,13 +63,19 @@ export interface LivePortfolio {
   prompts: Prompt[];
 }
 
+// In-memory cache — the per-asset citation pull is heavy (10k rows). 5-min TTL
+// keeps warm requests instant; survives across requests on a warm serverless instance.
+let _cache: { at: number; data: LivePortfolio } | null = null;
+const CACHE_TTL_MS = 5 * 60 * 1000;
+
 /**
- * Build a live portfolio from Profound: categories → prompts → visibility share.
+ * Build a live portfolio from Profound: prompts + real per-brand share of answer.
  * Returns null on any failure so the caller can fall back to demo data.
  */
 export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
   const client = getClient();
   if (!client) return null;
+  if (_cache && Date.now() - _cache.at < CACHE_TTL_MS) return _cache.data;
 
   try {
     // 1. Pick a category and always resolve its display name (even when the id
@@ -83,55 +89,100 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
     const brand = chosen.name ?? chosen.brand ?? "Your brand";
     if (!categoryId) return null;
 
-    // 2 + 3. Prompts and visibility share in parallel (both only need categoryId)
-    // so the live pull is one round-trip faster — snappier badge flip.
-    const [promptListRaw, visRows] = await Promise.all([
-      (client as any).organizations.categories
-        .prompts(categoryId)
+    const win = { start_date: isoDaysAgo(30), end_date: isoDaysAgo(0) };
+
+    // Four real pulls in parallel:
+    //  - prompts (text + topic)
+    //  - per-prompt heat: mentions_count + visibility_score (dims=[prompt])
+    //  - assets (id → name; which ids are ours)
+    //  - real share of answer: citations by [prompt, asset_id] → Claude ÷ field
+    const [promptListRaw, heatRows, assetList, shareRows] = await Promise.all([
+      (client as any).organizations.categories.prompts(categoryId).then(rows).catch(() => [] as any[]),
+      (client as any).reports
+        .visibility({ category_id: categoryId, ...win, metrics: ["mentions_count", "visibility_score"], dimensions: ["prompt"] })
         .then(rows)
         .catch(() => [] as any[]),
+      (client as any).organizations.listAssets(categoryId).then(rows).catch(() => [] as any[]),
       (client as any).reports
-        .visibility({
-          category_id: categoryId,
-          start_date: isoDaysAgo(30),
-          end_date: isoDaysAgo(0),
-          metrics: ["share_of_voice"],
-          dimensions: ["prompt"],
-        })
+        .visibility({ category_id: categoryId, ...win, metrics: ["visibility_score"], dimensions: ["prompt", "asset_id"] })
         .then(rows)
         .catch(() => [] as any[]),
     ]);
 
-    const promptList = promptListRaw.slice(0, 24);
-    if (!promptList.length) return null;
+    if (!promptListRaw.length) return null;
 
-    const shareByPrompt = new Map<string, number>();
-    for (const r of visRows) {
-      const key = r.prompt?.id ?? r.prompt ?? r.prompt_id ?? r.id;
-      const share = Number(r.share_of_voice ?? r.citation_share ?? r.visibility_score ?? r.share ?? 0);
-      if (key != null) shareByPrompt.set(String(key), share > 1 ? share / 100 : share);
+    // Profound returns positional metric arrays: { metrics:[...], dimensions:[...] }.
+    const norm = (s: string) => String(s ?? "").trim().toLowerCase();
+    const heatByText = new Map<string, { mentions: number; vscore: number }>();
+    for (const r of heatRows) {
+      const text = norm(r.dimensions?.[0]);
+      if (text) heatByText.set(text, { mentions: Number(r.metrics?.[0] ?? 0), vscore: Number(r.metrics?.[1] ?? 0) });
     }
 
-    // 4. Map to Bastion's Prompt shape.
-    const prompts: Prompt[] = promptList.map((p: any, i: number) => {
-      const text = p.prompt ?? p.text ?? `prompt ${i + 1}`;
-      const id = String(p.id ?? `live-${i}`);
-      const share = shareByPrompt.get(id) ?? shareByPrompt.get(text) ?? 0.4;
-      const leader = share >= 0.3 ? "us" : "OpenAI";
-      const volume = estimateVolume(text, share);
+    // Map asset id → name; flag Claude/Anthropic as ours.
+    const idToName = new Map<string, string>();
+    const ourIds = new Set<string>();
+    for (const a of assetList) {
+      const id = String(a.id ?? a.asset_id ?? "");
+      const name = String(a.name ?? "");
+      if (id) idToName.set(id, name);
+      if (["claude", "anthropic"].includes(norm(name))) ourIds.add(id);
+    }
+
+    // Real share of answer = (Claude + Anthropic) citations ÷ total for the prompt.
+    // The [prompt, asset_id] rows are positional; detect which value is the prompt.
+    const promptTexts = new Set(promptListRaw.map((p: any) => norm(p.prompt ?? p.text)));
+    const isUuid = (s: string) => /^[0-9a-f-]{36}$/i.test(s);
+    const agg = new Map<string, { ours: number; total: number; topId: string; topScore: number }>();
+    for (const r of shareRows) {
+      const d0 = String(r.dimensions?.[0] ?? "");
+      const d1 = String(r.dimensions?.[1] ?? "");
+      const assetId = isUuid(d0) ? d0 : d1;
+      const text = norm(isUuid(d0) ? d1 : d0);
+      const score = Number(r.metrics?.[0] ?? 0);
+      if (!text || !promptTexts.has(text)) continue;
+      const a = agg.get(text) ?? { ours: 0, total: 0, topId: "", topScore: 0 };
+      a.total += score;
+      if (ourIds.has(assetId)) a.ours += score;
+      if (score > a.topScore && assetId !== "00000000-0000-0000-0000-000000000000") {
+        a.topScore = score;
+        a.topId = assetId;
+      }
+      agg.set(text, a);
+    }
+
+    // Rank real prompts by demand (mentions) and keep a rich grid.
+    const enriched = promptListRaw
+      .map((p: any, i: number) => {
+        const text = p.prompt ?? p.text ?? `prompt ${i + 1}`;
+        const heat = heatByText.get(norm(text));
+        return { p, text, mentions: heat?.mentions ?? 0, vscore: heat?.vscore ?? 0 };
+      })
+      .sort((a: any, b: any) => b.mentions - a.mentions)
+      .slice(0, 48);
+
+    const prompts: Prompt[] = enriched.map(({ p, text, mentions }: any, i: number) => {
+      const a = agg.get(norm(text));
+      const share = a && a.total > 0 ? a.ours / a.total : 0;
+      const weLead = a ? ourIds.has(a.topId) : false;
+      const leader = weLead ? "us" : idToName.get(a?.topId ?? "") || "competitor";
+      const demand = Math.max(mentions, 50); // real demand proxy (Profound mentions)
+      const status: PromptStatus = weLead ? "winning" : share >= 0.18 ? "contested" : "losing";
       return {
-        id,
+        id: String(p.id ?? `live-${i}`),
         text,
-        monthlyVolume: volume,
-        shareOfAnswer: share,
+        monthlyVolume: demand,
+        shareOfAnswer: Math.min(0.99, share),
         leader,
-        annualValue: Math.round(annualValue(volume)),
-        status: statusFor(share, leader),
+        annualValue: Math.round(annualValue(demand)),
+        status,
         cluster: p.topic?.name ?? "Live",
       };
     });
 
-    return { source: "live", brand, categoryId, prompts };
+    const data: LivePortfolio = { source: "live", brand, categoryId, prompts };
+    _cache = { at: Date.now(), data };
+    return data;
   } catch (err) {
     console.error("[profound] live portfolio failed, falling back to demo:", err);
     return null;

@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWarRoom } from "@/lib/useWarRoom";
-import { buildCuratedPrompts, ATTACKER, BRAND, HERO_PROMPT, SKIP_PROMPT } from "@/lib/data";
+import { buildCuratedPrompts, ATTACKER, BRAND, HERO_PROMPT, HERO_PROMPT_ID, SKIP_PROMPT } from "@/lib/data";
+import type { Prompt } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
 import { Metrics } from "@/components/Metrics";
 import { PromptGrid } from "@/components/PromptGrid";
@@ -17,16 +18,18 @@ interface DataSource {
   source: "demo" | "live";
   brand: string;
   count: number;
+  prompts: Prompt[];
+  profoundUrl?: string;
 }
 
 export default function WarRoom() {
   const { state, run, reset } = useWarRoom();
   const curated = useMemo(() => buildCuratedPrompts(), []);
-  const [data, setData] = useState<DataSource>({ source: "demo", brand: "Anthropic", count: 2400 });
+  const [data, setData] = useState<DataSource>({ source: "demo", brand: "Anthropic", count: 2400, prompts: [] });
 
-  // Pull the live Profound portfolio once. The grid stays on the coherent demo
-  // scenario for reliability; this flips the data-source badge to LIVE and shows
-  // the real brand + synced prompt count when a working key is configured.
+  // Pull the live Profound portfolio once. Real prompts + real share-of-answer
+  // hydrate the grid; the hero stays pinned as the worked example so the scripted
+  // §7 run is reliable. Falls back to demo data if the key/live pull fails.
   useEffect(() => {
     let cancelled = false;
     fetch("/api/profound", { cache: "no-store" })
@@ -37,6 +40,8 @@ export default function WarRoom() {
           source: d.source === "live" ? "live" : "demo",
           brand: d.brand || "Anthropic",
           count: Array.isArray(d.prompts) ? d.prompts.length : 2400,
+          prompts: Array.isArray(d.prompts) ? d.prompts : [],
+          profoundUrl: d.profoundUrl,
         });
       })
       .catch(() => {});
@@ -60,15 +65,32 @@ export default function WarRoom() {
     return () => window.removeEventListener("keydown", onKey);
   }, [run, reset, state.running]);
 
+  // Grid: real Profound prompts (winners first) with the hero pinned as the worked
+  // example; falls back to the curated demo set when no live data.
+  const baseGrid = useMemo(() => {
+    if (data.source === "live" && data.prompts.length) {
+      const live = data.prompts
+        .filter((p) => p.id !== HERO_PROMPT_ID)
+        .slice()
+        .sort(
+          (a, b) =>
+            (a.status === "winning" ? 0 : 1) - (b.status === "winning" ? 0 : 1) ||
+            b.annualValue - a.annualValue
+        )
+        .slice(0, 19);
+      return [HERO_PROMPT, ...live];
+    }
+    return curated;
+  }, [data, curated]);
+
   // Reveal the skipped low-value prompt in the grid once the agent's SKIP step fires.
   const skipId = state.revealed >= 5 ? SKIP_PROMPT.id : undefined;
-  const curatedWithSkip = useMemo(() => {
-    if (!skipId) return curated;
-    // Inject the skip prompt next to the hero so the judgment beat is visible.
-    const out = [...curated];
+  const gridPrompts = useMemo(() => {
+    if (!skipId) return baseGrid;
+    const out = [...baseGrid];
     if (!out.find((p) => p.id === SKIP_PROMPT.id)) out.splice(1, 0, SKIP_PROMPT);
     return out;
-  }, [curated, skipId]);
+  }, [baseGrid, skipId]);
 
   return (
     <div className="relative min-h-screen flex flex-col terminal-grid">
@@ -130,10 +152,24 @@ export default function WarRoom() {
             <div className="flex items-center justify-between">
               <span className="eyebrow text-fg-muted">
                 High-intent prompts · share-of-answer
+                {data.source === "live" && (
+                  <span className="ml-2 text-green/80">· {data.count} live from Profound</span>
+                )}
               </span>
-              <span className="eyebrow">green = winning · red = losing</span>
+              {data.source === "live" && data.profoundUrl ? (
+                <a
+                  href={data.profoundUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="eyebrow text-blue hover:underline"
+                >
+                  open full list in Profound ↗
+                </a>
+              ) : (
+                <span className="eyebrow">green = winning · red = losing</span>
+              )}
             </div>
-            <PromptGrid prompts={curatedWithSkip} hero={state.hero} skipPromptId={skipId} />
+            <PromptGrid prompts={gridPrompts} hero={state.hero} skipPromptId={skipId} />
           </div>
         </div>
 
