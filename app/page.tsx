@@ -254,7 +254,7 @@ export default function WarRoom() {
       </footer>
       </div>
 
-      <ScaleReveal open={state.showScale} onClose={exitScale} />
+      <ScaleReveal open={state.showScale} onClose={exitScale} prompts={portfolioPrompts} />
     </div>
   );
 }
