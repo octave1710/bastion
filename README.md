@@ -1,74 +1,53 @@
-# BASTION
+# 🛡 BASTION
 
-**The trading desk for your brand's share of AI answers.**
+**The autonomous AEO operator on Profound.** Profound tells you where your brand loses AI Share of Voice — Bastion is the agent that **closes the gap**: it diagnoses, writes, distributes, and *publishes* the content to win the citation back, at the scale of a hundred marketers.
 
-Bastion treats every high-intent prompt as a **dollar-valued asset** and defends the
-portfolio 24/7 across two levers — **paid bids** and **organic content** — on every
-answer engine (ChatGPT, Claude, Gemini, Perplexity).
+**▶ Live demo: [bastion-xi.vercel.app](https://bastion-xi.vercel.app)**
 
-## The insight (why this is marketing *engineering*)
+> Built for the Profound Marketing Engineering Hackathon. Thesis: one marketing engineer = the productivity of 100 marketers — an agent that **executes** a marketing process at inhuman scale.
 
-Brands are losing the prompts that drive revenue inside AI answers, and they find out
-weeks later, if ever. The non-obvious part is the **paid↔organic arbitrage**:
+---
 
-> **Paid is a temporary bridge** that holds a position right now. **Organic is the
-> permanent win** that reclaims it and lets you *stop paying*. The agent arbitrates
-> between them by **urgency × dollar value** — paid to hold while organic ships, then
-> taper paid to zero.
+## The problem
 
-No content bot does this. Citation share is an *input*; **defended revenue** is the output.
+Brands are losing the high-intent prompts that drive revenue *inside AI answers* (ChatGPT, Claude, Gemini, Perplexity) — and they find out weeks later, if ever. Profound measures the gap. Fixing it — writing optimized, citable content for hundreds of prompts and distributing it across every channel — is a hundred marketers of manual work.
 
-## What it does (one agent, two modes)
+**Bastion executes that work.**
 
-- **Peacetime:** optimize allocation across paid + organic to maximize defended
-  revenue and cut wasted spend where you already dominate organically.
-- **Wartime:** when a competitor overtakes you on a valuable prompt, riposte
-  autonomously: **detect → teardown → value-check → allocate → decide → self-eval →
-  act**, with the reasoning streamed to screen.
+## The loop — every step a real action, real output
 
-Two visible guardrails (judgment, not blind action):
-1. **Self-eval gate with a revise loop** — it grades its own counter-content vs the
-   competitor (draft 6.8 → revise → 8.4 → ship). It won't publish weak work.
-2. **Portfolio judgment** — it **skips** low-value prompts where defending costs more
-   than it returns.
+| Step | What the agent does |
+|---|---|
+| **Diagnose** | Pulls **real Profound data** — Share of Voice, Visibility Score, Avg Position, rank — and the exact prompts where the brand loses. Per gap, a real **competitive teardown**: *why* the cited leader wins and *what our page must cover* to take it back. |
+| **Create** | Generates **full, publish-ready AEO pages** (not snippets) for each gap, live, via OpenAI — with JSON-LD schema markup so answer engines structure and cite them. |
+| **Distribute** | For every page, a complete kit: **LinkedIn post · X thread · Reddit answer · outreach email**. The whole distribution, done. |
+| **Publish** | Ships each page to a **real, live, schema-marked URL** (`/p/[slug]`) — clickable, hosted, today. |
+| **Paid ↔ Organic Autopilot** | Buys the #1 spot with **ads now**, then **automatically turns the ads off** as the free content ranks — you stop paying once you own the answer. Shows the $ saved. |
+| **Autopilot** | Left running, the agent **continuously** scans the gap list and keeps generating + publishing — one person, the work of a hundred. |
+| **Prove** | Compiles everything into a **CMO-ready, Profound-branded brief** + a real **Google Ads campaign file** (`.csv`). Dispatches **real Profound Agents** on the platform. |
 
-## The dollar model (defensible, on screen)
+## Real, not theater
 
-```
-value = monthly_volume × Δshare × click_through × conversion × ACV
-```
+- **Real Profound data** via `@profoundai/client` (Share of Voice, citations, prompts) — falls back to baked-in real content so the demo never breaks.
+- **Real content** generated live by OpenAI (`/api/generate`).
+- **Real published pages** at `/p/[slug]` with schema markup.
+- **Real Profound Agents** dispatched via `agents.runs.create`.
+- Dollar figures are clearly labeled **illustrative estimates** — the share/visibility metrics are real.
 
-Hero prompt "best AI for coding": 74,000/mo × 18pt × 6% × 0.5% × $25,000 → **$1.2M/yr**.
-The full 2,400-position portfolio ladders to the **$4.2M/mo ($50.4M/yr)** headline.
-Illustrative unit economics — the mechanism is the point, and we surface every
-assumption so you can see it's a model, not a measurement.
+## Stack
 
-## Profound-native
+Next.js 16 · TypeScript · Tailwind v4 · framer-motion · Profound API · OpenAI · deployed on Vercel.
 
-Bastion is two faces of one system:
-- **The War Room** (this Next.js app) visualizes and narrates the loop.
-- **The Profound agent** ([`profound-agent/`](./profound-agent/AGENT.md)) is the thing
-  that actually runs — on Profound's Answer-Engine data, Prompt Volumes, and LLM / Ads
-  / Slack action nodes. The War Room can execute it live via `POST /api/profound/agent`.
-
-Live Profound data hydrates the war room when a key is present
-(`@profoundai/client`, `X-API-Key`); it falls back to demo data so the demo is always
-safe. Verify your key: `node scripts/profound-smoke.mjs`.
-
-## Run it
+## Run locally
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000  (press Space to run the demo)
-# optional: live data — paste your key into .env.local, then:
-node scripts/profound-smoke.mjs
+cp .env.example .env.local   # add PROFOUND_API_KEY + OPENAI_API_KEY
+npm run dev                  # http://localhost:3000
 ```
 
-Stack: Next.js 16 + TypeScript + Tailwind v4 + framer-motion. Deterministic demo mode
-for live-projector reliability. See [DEMO.md](./DEMO.md) for the demo script.
+Without keys it runs on real baked-in demo data. With them, it pulls live Profound data and generates content live. See [`DEMO.md`](./DEMO.md) for the demo script and [`profound-agent/`](./profound-agent/) for the Profound-native agent definition.
 
-## Scale
+---
 
-The agent operates across thousands of prompt dimensions continuously — defending,
-valuing, and triaging by ROI no human team could match. **Point it at any brand —
-plug-and-play.**
+*Diagnose → Create → Distribute → Publish → Prove. Point it at any brand.*
