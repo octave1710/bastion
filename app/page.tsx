@@ -29,7 +29,7 @@ export default function WarRoom() {
   // the real brand + synced prompt count when a working key is configured.
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/profound")
+    fetch("/api/profound", { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return;

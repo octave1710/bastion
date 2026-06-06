@@ -39,7 +39,8 @@ const asArray = (x) =>
 try {
   console.log("→ Listing categories…");
   const cats = asArray(await client.organizations.categories.list());
-  console.log(`✓ ${cats.length} categories. First:`, cats[0]?.name ?? cats[0]?.id ?? "(none)");
+  console.log(`✓ ${cats.length} categories. Copy a Category ID into .env.local:`);
+  cats.forEach((c) => console.log(`   PROFOUND_CATEGORY_ID=${c.id}   # ${c.name ?? c.brand ?? "(unnamed)"}`));
 
   const categoryId = process.env.PROFOUND_CATEGORY_ID?.trim() || cats[0]?.id;
   if (categoryId) {
@@ -47,14 +48,16 @@ try {
     console.log(`✓ ${prompts.length} prompts in category. Sample:`);
     prompts.slice(0, 5).forEach((p) => console.log("   ·", p.prompt ?? p.text ?? p.id));
 
-    console.log("→ Pulling visibility (citation_share)…");
-    const end = new Date().toISOString();
-    const start = new Date(Date.now() - 30 * 864e5).toISOString();
+    console.log("→ Pulling visibility (share_of_voice)…");
+    const midnight = new Date();
+    midnight.setUTCHours(0, 0, 0, 0);
+    const end = midnight.toISOString();
+    const start = new Date(midnight.getTime() - 30 * 864e5).toISOString();
     const vis = await client.reports.visibility({
       category_id: categoryId,
       start_date: start,
       end_date: end,
-      metrics: ["citation_share"],
+      metrics: ["share_of_voice"],
       dimensions: ["prompt"],
     });
     const rows = asArray(vis);
@@ -63,7 +66,12 @@ try {
 
   console.log("→ Listing Profound agents…");
   const agents = asArray(await client.agents.list());
-  console.log(`✓ ${agents.length} agents.`, agents[0] ? `First: ${agents[0].name ?? agents[0].id}` : "");
+  if (agents.length) {
+    console.log(`✓ ${agents.length} agents. Copy an Agent ID into .env.local (optional):`);
+    agents.forEach((a) => console.log(`   PROFOUND_AGENT_ID=${a.id}   # ${a.name ?? "(unnamed)"}`));
+  } else {
+    console.log("✓ 0 agents yet — build one in Profound's agent builder (see profound-agent/AGENT.md), optional.");
+  }
 
   console.log("\n✓ ALL GOOD — key works. Bastion will show 'Profound · live'.");
 } catch (err) {

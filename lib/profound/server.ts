@@ -33,9 +33,11 @@ function rows(x: unknown): any[] {
   return [];
 }
 
+// Profound requires day-boundary dates (midnight UTC), not arbitrary timestamps.
 function isoDaysAgo(days: number): string {
   const d = new Date();
-  d.setDate(d.getDate() - days);
+  d.setUTCHours(0, 0, 0, 0);
+  d.setUTCDate(d.getUTCDate() - days);
   return d.toISOString();
 }
 
@@ -93,13 +95,13 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
       const vis = await (client as any).reports.visibility({
         category_id: categoryId,
         start_date: isoDaysAgo(30),
-        end_date: new Date().toISOString(),
-        metrics: ["citation_share"],
+        end_date: isoDaysAgo(0),
+        metrics: ["share_of_voice"],
         dimensions: ["prompt"],
       });
       for (const r of rows(vis)) {
         const key = r.prompt?.id ?? r.prompt ?? r.prompt_id ?? r.id;
-        const share = Number(r.citation_share ?? r.share_of_voice ?? r.share ?? 0);
+        const share = Number(r.share_of_voice ?? r.citation_share ?? r.visibility_score ?? r.share ?? 0);
         if (key != null) shareByPrompt.set(String(key), share > 1 ? share / 100 : share);
       }
     } catch {
