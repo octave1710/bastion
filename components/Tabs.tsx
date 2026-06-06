@@ -1,9 +1,10 @@
 "use client";
 
-export type View = "warroom" | "levers" | "conquer" | "portfolio";
+export type View = "warroom" | "execute" | "levers" | "conquer" | "portfolio";
 
 const TABS: { id: View; label: string; glyph: string }[] = [
   { id: "warroom", label: "War Room", glyph: "⬡" },
+  { id: "execute", label: "Execute", glyph: "⚡" },
   { id: "levers", label: "Paid ↔ Organic", glyph: "◎" },
   { id: "conquer", label: "Conquer", glyph: "⚔" },
   { id: "portfolio", label: "Portfolio", glyph: "▦" },

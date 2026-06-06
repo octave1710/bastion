@@ -14,6 +14,7 @@ import { AgentConsole } from "@/components/AgentConsole";
 import { EconomicsPanel } from "@/components/EconomicsPanel";
 import { ScaleReveal } from "@/components/ScaleReveal";
 import { Ambiance } from "@/components/Ambiance";
+import { ExecuteView } from "@/components/ExecuteView";
 import { LeversView } from "@/components/LeversView";
 import { ConquerView } from "@/components/ConquerView";
 import { PortfolioView } from "@/components/PortfolioView";
@@ -269,6 +270,11 @@ export default function WarRoom() {
       </>
       )}
 
+      {view === "execute" && (
+        <main className="flex-1 px-6 py-5 overflow-y-auto">
+          <ExecuteView prompts={portfolioPrompts} />
+        </main>
+      )}
       {view === "levers" && (
         <main className="flex-1 px-6 py-5 overflow-y-auto">
           <LeversView prompts={portfolioPrompts} policy={policy} onPolicyChange={setPolicy} />
