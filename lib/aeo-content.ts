@@ -6,6 +6,13 @@
 // at scale; this is the demo-safe, baked-in baseline for the real prompts we lose.
 // ─────────────────────────────────────────────────────────────────────────────
 
+export interface Distribution {
+  linkedin: string; // ready-to-post LinkedIn update
+  xThread: string[]; // X/Twitter thread (array of tweets)
+  reddit: string; // helpful Reddit answer
+  email: string; // cold outreach / earned-media email
+}
+
 export interface AeoContent {
   /** matches the live Profound prompt text (lowercased) */
   match: string;
@@ -18,6 +25,10 @@ export interface AeoContent {
   body?: string;
   /** the structured, quotable facts engines lift into answers */
   keyFacts: string[];
+  /** JSON-LD schema markup so answer engines structure + cite the page */
+  schema?: string;
+  /** the multi-channel distribution kit — what to do with the content */
+  distribution?: Distribution;
 }
 
 export const AEO_LIBRARY: AeoContent[] = [
