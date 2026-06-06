@@ -51,7 +51,23 @@ function IdleMonitor() {
   );
 }
 
-export function AgentConsole({ revealed }: { revealed: number }) {
+export function AgentConsole({
+  revealed,
+  running = false,
+  paused = false,
+  speed = 1,
+  onTogglePause,
+  onNext,
+  onSpeed,
+}: {
+  revealed: number;
+  running?: boolean;
+  paused?: boolean;
+  speed?: number;
+  onTogglePause?: () => void;
+  onNext?: () => void;
+  onSpeed?: (s: number) => void;
+}) {
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -62,12 +78,42 @@ export function AgentConsole({ revealed }: { revealed: number }) {
 
   return (
     <div className="flex flex-col h-full bg-bg-panel border border-border panel-elev rounded-sm overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-bg-elev">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border bg-bg-elev">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-green animate-pulse" />
+          <span className={`h-2 w-2 rounded-full bg-green ${paused ? "" : "animate-pulse"}`} />
           <span className="eyebrow text-fg-muted">Bastion Agent · reasoning</span>
         </div>
-        <span className="eyebrow">autonomous riposte</span>
+        {running ? (
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={onTogglePause}
+              className="px-2 py-0.5 rounded text-[11px] border border-border-strong text-fg-muted hover:text-fg hover:border-fg-dim transition"
+              title="Space"
+            >
+              {paused ? "▶ resume" : "⏸ pause"}
+            </button>
+            <button
+              onClick={onNext}
+              className="px-2 py-0.5 rounded text-[11px] border border-border-strong text-fg-muted hover:text-fg hover:border-fg-dim transition"
+              title="→"
+            >
+              ⏭ next
+            </button>
+            <div className="flex items-center rounded border border-border-strong overflow-hidden">
+              {[0.5, 1, 2].map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onSpeed?.(s)}
+                  className={`px-1.5 py-0.5 text-[10px] tnum ${speed === s ? "bg-green text-bg" : "text-fg-dim hover:text-fg-muted"}`}
+                >
+                  {s}×
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <span className="eyebrow">autonomous riposte</span>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-3 font-mono text-[12px] leading-relaxed">

@@ -20,6 +20,8 @@ export interface WarRoomState {
   defendedMonthly: number;
   showScale: boolean;
   running: boolean;
+  paused: boolean;
+  speed: number; // 0.5 | 1 | 2
 }
 
 const INITIAL: WarRoomState = {
@@ -30,12 +32,17 @@ const INITIAL: WarRoomState = {
   defendedMonthly: DEFENDED_REVENUE_MONTHLY,
   showScale: false,
   running: false,
+  paused: false,
+  speed: 1,
 };
 
 export function useWarRoom() {
   const [state, setState] = useState<WarRoomState>(INITIAL);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
   const cancelled = useRef(false);
+  const pausedRef = useRef(false);
+  const speedRef = useRef(1);
+  const skipRef = useRef(false); // manual "next" → resolve the current wait early
 
   const clearTimers = useCallback(() => {
     timers.current.forEach((t) => clearTimeout(t));
@@ -47,6 +54,30 @@ export function useWarRoom() {
       new Promise<void>((resolve) => {
         const id = setTimeout(resolve, ms);
         timers.current.push(id);
+      }),
+    []
+  );
+
+  // Pause/speed/step-aware wait: accumulates elapsed only while not paused, scaled
+  // by speed, and resolves early on a manual "next". Lets the presenter slow down,
+  // pause to explain, or step through the agent's reasoning beat by beat.
+  const wait = useCallback(
+    (targetMs: number) =>
+      new Promise<void>((resolve) => {
+        let elapsed = 0;
+        const STEP = 80;
+        const tick = () => {
+          if (cancelled.current) return resolve();
+          if (skipRef.current) {
+            skipRef.current = false;
+            return resolve();
+          }
+          if (!pausedRef.current) elapsed += STEP * speedRef.current;
+          if (elapsed >= targetMs) return resolve();
+          const id = setTimeout(tick, STEP);
+          timers.current.push(id);
+        };
+        tick();
       }),
     []
   );
@@ -70,6 +101,8 @@ export function useWarRoom() {
       defendedMonthly: s.defendedMonthly,
       showScale: false,
       running: false,
+      paused: false,
+      speed: s.speed,
     }));
   }, [clearTimers]);
 
@@ -77,15 +110,33 @@ export function useWarRoom() {
     setState((s) => ({ ...s, ...p }));
   }, []);
 
+  // ── Pace controls ────────────────────────────────────────────────────────
+  const togglePause = useCallback(() => {
+    pausedRef.current = !pausedRef.current;
+    setState((s) => ({ ...s, paused: pausedRef.current }));
+  }, []);
+
+  const next = useCallback(() => {
+    // Advance the current beat immediately (also un-pauses the wait for one step).
+    skipRef.current = true;
+  }, []);
+
+  const setSpeed = useCallback((speed: number) => {
+    speedRef.current = speed;
+    setState((s) => ({ ...s, speed }));
+  }, []);
+
   const run = useCallback(async () => {
     // Always start from a known-good state — demo reliability over everything.
     cancelled.current = false;
+    pausedRef.current = false;
+    skipRef.current = false;
     clearTimers();
-    setState({ ...INITIAL, running: true });
+    setState((s) => ({ ...INITIAL, running: true, speed: s.speed }));
 
     const guard = () => cancelled.current;
 
-    // ── (10–25s) THE ATTACK ──────────────────────────────────────────────
+    // ── THE ATTACK ───────────────────────────────────────────────────────
     await sleep(800);
     if (guard()) return;
     patch({
@@ -94,30 +145,30 @@ export function useWarRoom() {
       revenueAtRisk: HERO_REVENUE_AT_RISK,
       defendedMonthly: DEFENDED_REVENUE_MONTHLY - HERO_MONTHLY_SLICE,
     });
-    await sleep(3200);
+    await wait(3400);
     if (guard()) return;
 
-    // ── (25–65s) THE RIPOSTE — reveal reasoning steps one at a time ───────
+    // ── THE RIPOSTE — reveal reasoning steps one at a time (pausable) ──────
     patch({ phase: "riposte" });
     for (let i = 0; i < RIPOSTE_SCRIPT.length; i++) {
       patch({ revealed: i + 1 });
-      await sleep(RIPOSTE_SCRIPT[i].dwellMs);
+      await wait(RIPOSTE_SCRIPT[i].dwellMs);
       if (guard()) return;
     }
 
-    // ── (65–85s) THE PAYOFF — reconquest ─────────────────────────────────
+    // ── THE PAYOFF — reconquest ───────────────────────────────────────────
     patch({
       phase: "payoff",
       hero: "reconquered",
       revenueAtRisk: 0,
       defendedMonthly: DEFENDED_REVENUE_MONTHLY + HERO_MONTHLY_SLICE,
     });
-    await sleep(3600);
+    await wait(3600);
     if (guard()) return;
 
-    // ── (85–100s) THE SCALE REVEAL ───────────────────────────────────────
+    // ── THE SCALE REVEAL ──────────────────────────────────────────────────
     patch({ phase: "scale", showScale: true, running: false });
-  }, [clearTimers, patch, sleep]);
+  }, [clearTimers, patch, sleep, wait]);
 
-  return { state, run, reset, exitScale };
+  return { state, run, reset, exitScale, togglePause, next, setSpeed };
 }

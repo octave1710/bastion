@@ -27,7 +27,7 @@ interface DataSource {
 }
 
 export default function WarRoom() {
-  const { state, run, reset, exitScale } = useWarRoom();
+  const { state, run, reset, exitScale, togglePause, next, setSpeed } = useWarRoom();
   const curated = useMemo(() => buildCuratedPrompts(), []);
 
   // Persistent proof: each completed defense is logged and SURVIVES Exit/replay.
@@ -93,13 +93,16 @@ export default function WarRoom() {
       if (e.code === "Space" || e.code === "Enter") {
         e.preventDefault();
         if (!state.running) run();
+        else togglePause(); // pause/resume mid-run to explain a beat
+      } else if (e.code === "ArrowRight") {
+        if (state.running) next(); // step to the next beat
       } else if (e.key.toLowerCase() === "r" || e.code === "Escape") {
         reset();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [run, reset, state.running]);
+  }, [run, reset, togglePause, next, state.running]);
 
   // Grid: real Profound prompts (winners first) with the hero pinned as the worked
   // example; falls back to the curated demo set when no live data.
@@ -215,7 +218,15 @@ export default function WarRoom() {
         {/* RIGHT: agent console + economics */}
         <div className="flex flex-col gap-5 min-h-0">
           <div className="h-[420px] min-h-0">
-            <AgentConsole revealed={state.revealed} />
+            <AgentConsole
+              revealed={state.revealed}
+              running={state.running}
+              paused={state.paused}
+              speed={state.speed}
+              onTogglePause={togglePause}
+              onNext={next}
+              onSpeed={setSpeed}
+            />
           </div>
           <EconomicsPanel />
           <DefendedLog entries={log} />
