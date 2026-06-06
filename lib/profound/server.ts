@@ -83,29 +83,33 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
     const brand = chosen.name ?? chosen.brand ?? "Your brand";
     if (!categoryId) return null;
 
-    // 2. Prompts in the category (text + id).
-    const promptList = rows(
-      await (client as any).organizations.categories.prompts(categoryId)
-    ).slice(0, 24);
+    // 2 + 3. Prompts and visibility share in parallel (both only need categoryId)
+    // so the live pull is one round-trip faster — snappier badge flip.
+    const [promptListRaw, visRows] = await Promise.all([
+      (client as any).organizations.categories
+        .prompts(categoryId)
+        .then(rows)
+        .catch(() => [] as any[]),
+      (client as any).reports
+        .visibility({
+          category_id: categoryId,
+          start_date: isoDaysAgo(30),
+          end_date: isoDaysAgo(0),
+          metrics: ["share_of_voice"],
+          dimensions: ["prompt"],
+        })
+        .then(rows)
+        .catch(() => [] as any[]),
+    ]);
+
+    const promptList = promptListRaw.slice(0, 24);
     if (!promptList.length) return null;
 
-    // 3. Visibility (citation share) per prompt, last 30 days.
-    let shareByPrompt = new Map<string, number>();
-    try {
-      const vis = await (client as any).reports.visibility({
-        category_id: categoryId,
-        start_date: isoDaysAgo(30),
-        end_date: isoDaysAgo(0),
-        metrics: ["share_of_voice"],
-        dimensions: ["prompt"],
-      });
-      for (const r of rows(vis)) {
-        const key = r.prompt?.id ?? r.prompt ?? r.prompt_id ?? r.id;
-        const share = Number(r.share_of_voice ?? r.citation_share ?? r.visibility_score ?? r.share ?? 0);
-        if (key != null) shareByPrompt.set(String(key), share > 1 ? share / 100 : share);
-      }
-    } catch {
-      // visibility optional; we can still render prompts with neutral share
+    const shareByPrompt = new Map<string, number>();
+    for (const r of visRows) {
+      const key = r.prompt?.id ?? r.prompt ?? r.prompt_id ?? r.id;
+      const share = Number(r.share_of_voice ?? r.citation_share ?? r.visibility_score ?? r.share ?? 0);
+      if (key != null) shareByPrompt.set(String(key), share > 1 ? share / 100 : share);
     }
 
     // 4. Map to Bastion's Prompt shape.
