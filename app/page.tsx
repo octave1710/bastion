@@ -3,15 +3,18 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useWarRoom } from "@/lib/useWarRoom";
-import { buildCuratedPrompts, ATTACKER, BRAND, HERO_PROMPT, HERO_PROMPT_ID, SKIP_PROMPT } from "@/lib/data";
+import { buildCuratedPrompts, buildPortfolio, ATTACKER, BRAND, HERO_PROMPT, HERO_PROMPT_ID, SKIP_PROMPT } from "@/lib/data";
 import type { Prompt } from "@/lib/types";
 import { Topbar } from "@/components/Topbar";
+import { Tabs, type View } from "@/components/Tabs";
 import { Metrics } from "@/components/Metrics";
 import { PromptGrid } from "@/components/PromptGrid";
 import { AgentConsole } from "@/components/AgentConsole";
 import { EconomicsPanel } from "@/components/EconomicsPanel";
 import { ScaleReveal } from "@/components/ScaleReveal";
 import { Ambiance } from "@/components/Ambiance";
+import { LeversView } from "@/components/LeversView";
+import { PortfolioView } from "@/components/PortfolioView";
 import { compactUSD } from "@/lib/economics";
 
 interface DataSource {
@@ -26,6 +29,14 @@ export default function WarRoom() {
   const { state, run, reset } = useWarRoom();
   const curated = useMemo(() => buildCuratedPrompts(), []);
   const [data, setData] = useState<DataSource>({ source: "demo", brand: "Anthropic", count: 2400, prompts: [] });
+  const [view, setView] = useState<View>("warroom");
+
+  // Prompts feeding the Levers + Portfolio views: real live data when available,
+  // else a representative demo portfolio so the views are never empty.
+  const portfolioPrompts = useMemo<Prompt[]>(
+    () => (data.source === "live" && data.prompts.length ? data.prompts : buildPortfolio(120)),
+    [data]
+  );
 
   // Pull the live Profound portfolio once. Real prompts + real share-of-answer
   // hydrate the grid; the hero stays pinned as the worked example so the scripted
@@ -118,7 +129,10 @@ export default function WarRoom() {
         category={data.source === "live" ? data.brand : undefined}
         syncedCount={data.count}
       />
+      <Tabs view={view} onChange={setView} />
 
+      {view === "warroom" && (
+      <>
       {/* Attack alert banner */}
       <AnimatePresence>
         {state.revenueAtRisk > 0 && (
@@ -181,6 +195,19 @@ export default function WarRoom() {
           <EconomicsPanel />
         </div>
       </main>
+      </>
+      )}
+
+      {view === "levers" && (
+        <main className="flex-1 px-6 py-5 overflow-y-auto">
+          <LeversView prompts={portfolioPrompts} />
+        </main>
+      )}
+      {view === "portfolio" && (
+        <main className="flex-1 px-6 py-5 overflow-y-auto">
+          <PortfolioView prompts={portfolioPrompts} />
+        </main>
+      )}
 
       <footer className="px-6 py-2 border-t border-border flex items-center justify-between text-[10px] text-fg-dim">
         <span className="font-mono">

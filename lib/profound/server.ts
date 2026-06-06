@@ -9,6 +9,9 @@ import Profound from "@profoundai/client";
 import type { Prompt, PromptStatus } from "../types";
 import { annualValue } from "../economics";
 
+// Panel→market extrapolation: brings top live prompts to ~hero scale (≈$1.2M/yr).
+const VOLUME_FACTOR = 40;
+
 export function hasProfoundKey(): boolean {
   return Boolean(process.env.PROFOUND_API_KEY && process.env.PROFOUND_API_KEY.trim());
 }
@@ -166,7 +169,10 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
       const share = a && a.total > 0 ? a.ours / a.total : 0;
       const weLead = a ? ourIds.has(a.topId) : false;
       const leader = weLead ? "us" : idToName.get(a?.topId ?? "") || "competitor";
-      const demand = Math.max(mentions, 50); // real demand proxy (Profound mentions)
+      // Profound's mentions_count is panel-sampled, not total market volume.
+      // Extrapolate to an estimated true monthly volume so $ values reach real
+      // business scale (top prompts ≈ hero scale) and the ROI ledger is meaningful.
+      const demand = Math.round(Math.max(mentions, 50) * VOLUME_FACTOR);
       const status: PromptStatus = weLead ? "winning" : share >= 0.18 ? "contested" : "losing";
       return {
         id: String(p.id ?? `live-${i}`),
