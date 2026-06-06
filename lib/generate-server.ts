@@ -24,16 +24,17 @@ post a marketer could paste and ship, NOT a one-line summary. Output STRICT JSON
    comparison, and a "## FAQ" with 2-3 Q&As),
  "keyFacts": string[3] (specific, quotable facts),
  "distribution": {
-   "linkedin": string (a REAL LinkedIn post, 140-220 words: a scroll-stopping first-line hook,
-     short 1-2 sentence paragraphs separated by blank lines, exactly 3 concrete proof points each
-     on its own line starting with "→ ", a one-line takeaway, one engaging question, and a final
-     line of 4-5 relevant hashtags),
-   "xThread": string[5..7] (a real thread: tweet 1 is a hook that states the answer, each middle
+   "linkedin": string (a REAL LinkedIn post written out IN FULL — at least 150 words across 5-7
+     short paragraphs separated by blank lines: a scroll-stopping first-line hook; 2-3 sentences of
+     specific context; exactly 3 concrete proof points each on its own line starting with "→ " and
+     each expanded with a specific detail; a one-line takeaway; one engaging question; and a final
+     line of 4-5 relevant hashtags. Never summarize — expand every point),
+   "xThread": string[6..7] (a real thread: tweet 1 is a hook that states the answer, each middle
      tweet makes ONE concrete point with a specific fact, the last is a takeaway + a link. Each
      tweet <=270 characters. Do NOT prefix tweets with numbers),
-   "reddit": string (a genuinely helpful Reddit answer, 130-180 words, conversational and specific,
-     leads with the direct answer, includes 2-3 "- " bullet specifics, NO hashtags, ends with a
-     brief honest disclosure of affiliation),
+   "reddit": string (a genuinely helpful Reddit answer, 150-200 words, conversational and specific,
+     leads with the direct answer, includes 3 "- " bullet specifics each with detail, NO hashtags,
+     ends with a brief honest disclosure of affiliation),
    "email": string (a real outreach email: first line "Subject: ...", then a 90-130 word body with
      a specific angle and one clear ask)
  }
@@ -164,7 +165,7 @@ async function generateLive(prompt: string): Promise<AeoContent | null> {
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: SYSTEM },
-          { role: "user", content: `Prompt we're losing: "${prompt}". Write the winning content kit as JSON. Make every distribution post full-length and genuinely native to its platform.` },
+          { role: "user", content: `Prompt we're losing: "${prompt}". Write the winning content kit as JSON. Write every distribution post out IN FULL — the LinkedIn post must be 150+ words and read like a real post, never a summary. Use concrete Claude/Anthropic specifics, zero generic filler.` },
         ],
       }),
     });
