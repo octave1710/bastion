@@ -262,9 +262,9 @@ async function pickAgent(prefer: string): Promise<{ id: string; name: string } |
   return agents.find((a) => re.test(a.name)) ?? agents[0];
 }
 
-/** Dispatch a REAL Profound agent run. Returns { runId, agentName, status } or null. */
+/** Dispatch a REAL Profound agent run. Returns the run + owning agent id (needed to poll status) or null. */
 export async function dispatchProfoundAgent(prefer = "citation gap|aeo|article"): Promise<
-  { runId: string; agentName: string; status: string } | null
+  { runId: string; agentId: string; agentName: string; status: string; startedAt?: string } | null
 > {
   const client = getClient();
   if (!client) return null;
@@ -272,9 +272,35 @@ export async function dispatchProfoundAgent(prefer = "citation gap|aeo|article")
   if (!agent) return null;
   try {
     const run = await (client as any).agents.runs.create(agent.id, {});
-    return { runId: String(run.id ?? "run"), agentName: agent.name, status: String(run.status ?? "queued") };
+    return {
+      runId: String(run.id ?? "run"),
+      agentId: agent.id,
+      agentName: agent.name,
+      status: String(run.status ?? "queued"),
+      startedAt: run.started_at ?? undefined,
+    };
   } catch (err) {
     console.error("[profound] agent dispatch failed:", err);
+    return null;
+  }
+}
+
+/** Poll the REAL live status of a dispatched run from the Profound API. */
+export async function getProfoundRunStatus(
+  agentId: string,
+  runId: string,
+): Promise<{ status: string; startedAt?: string; finishedAt?: string } | null> {
+  const client = getClient();
+  if (!client || !agentId || !runId) return null;
+  try {
+    const r = await (client as any).agents.runs.retrieve(runId, { agent_id: agentId });
+    return {
+      status: String(r.status ?? "unknown"),
+      startedAt: r.started_at ?? undefined,
+      finishedAt: r.finished_at ?? undefined,
+    };
+  } catch (err) {
+    console.error("[profound] run status failed:", err);
     return null;
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Prompt } from "@/lib/types";
 import type { AeoContent } from "@/lib/aeo-content";
@@ -19,7 +19,8 @@ interface Produced {
   channel?: Channel;
 }
 type Channel = "article" | "linkedin" | "x" | "reddit" | "email";
-interface AgentRun { agentName: string; runId: string; status: string }
+interface AgentRun { agentName: string; runId: string; agentId: string; status: string; startedAt?: string; finishedAt?: string }
+const TERMINAL = new Set(["succeeded", "failed", "cancelled", "skipped"]);
 interface Plan { contentPrompts: Prompt[]; paidPrompts: Prompt[]; campaign: CampaignRow[]; totals: ReturnType<typeof campaignTotals> }
 
 const MAX_LIVE = 6;
@@ -54,6 +55,32 @@ export function ExecuteView({ prompts, brandKpis, brand }: { prompts: Prompt[]; 
   const [agents, setAgents] = useState<AgentRun[]>([]);
   const [executed, setExecuted] = useState<Plan | null>(null);
   const cancel = useRef(false);
+
+  // Poll the REAL live status of dispatched Profound runs (queued → running →
+  // succeeded), straight from the Profound API — proof they're real, not chips.
+  const agentsRef = useRef<AgentRun[]>([]);
+  agentsRef.current = agents;
+  useEffect(() => {
+    if (agents.length === 0) return;
+    let ticks = 0;
+    const iv = setInterval(async () => {
+      ticks++;
+      const pending = agentsRef.current.filter((a) => a.agentId && !TERMINAL.has(a.status));
+      if (pending.length === 0 || ticks > 10) { clearInterval(iv); return; }
+      await Promise.all(
+        pending.map(async (a) => {
+          try {
+            const r = await fetch(`/api/profound/agent/run?agentId=${encodeURIComponent(a.agentId)}&runId=${encodeURIComponent(a.runId)}`);
+            const j = await r.json();
+            if (j?.status && j.status !== "unknown") {
+              setAgents((prev) => prev.map((x) => (x.runId === a.runId ? { ...x, status: j.status, startedAt: j.startedAt ?? x.startedAt, finishedAt: j.finishedAt ?? x.finishedAt } : x)));
+            }
+          } catch { /* keep last status */ }
+        }),
+      );
+    }, 3500);
+    return () => clearInterval(iv);
+  }, [agents.length]);
 
   const preview = useMemo(() => allocate(prompts, budget), [prompts, budget]);
   const plan = executed ?? preview;
@@ -142,6 +169,9 @@ export function ExecuteView({ prompts, brandKpis, brand }: { prompts: Prompt[]; 
         </div>
       </div>
 
+      {/* Real Profound agent runs dispatched by THIS execution — live status */}
+      {agents.length > 0 && <ProfoundRuns agents={agents} />}
+
       {/* Feature 3 — continuous execution */}
       <Autopilot prompts={prompts} />
 
@@ -155,15 +185,6 @@ export function ExecuteView({ prompts, brandKpis, brand }: { prompts: Prompt[]; 
 
           <PaidOrganicAutopilot plan={plan} />
         </>
-      )}
-
-      {agents.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-[11px]">
-          <span className="eyebrow text-fg-muted">dispatched on Profound:</span>
-          {agents.map((a) => (
-            <span key={a.runId} className="rounded px-2 py-1 border border-violet/40 text-violet bg-violet/10">⚡ {a.agentName} <span className="text-fg-dim">· run {a.runId.slice(0, 8)} · {a.status}</span></span>
-          ))}
-        </div>
       )}
 
       {produced.length > 0 ? (
@@ -224,6 +245,55 @@ function PaidOrganicAutopilot({ plan }: { plan: Plan }) {
           <div className="flex justify-between"><span className="text-fg-muted">Ad spend you stop paying after</span><span className="tnum text-green">{compactUSD(monthlySaved)}/mo</span></div>
           <div className="flex justify-between border-t border-border pt-1.5"><span className="text-fg">Saved /yr by winning with content</span><span className="tnum text-green font-semibold">{compactUSD(annualSaved)}</span></div>
           <p className="text-[10px] text-fg-dim pt-1">Profound shows when your content starts ranking — the agent automatically turns the ads off. You stop paying once you own the answer for free.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Real Profound agent runs created by this execution. Shows the live status
+// straight from the Profound API (queued → running → succeeded) + the real run
+// IDs you can verify in Profound. Clearly separate from Autopilot's own runs.
+const RUN_META: Record<string, { label: string; cls: string; dot?: boolean }> = {
+  queued: { label: "queued", cls: "text-amber border-amber/40 bg-amber/10" },
+  running: { label: "running", cls: "text-blue border-blue/40 bg-blue/10", dot: true },
+  succeeded: { label: "✓ succeeded", cls: "text-green border-green/40 bg-green/10" },
+  failed: { label: "failed", cls: "text-red border-red/40 bg-red/10" },
+  cancelled: { label: "cancelled", cls: "text-red border-red/40 bg-red/10" },
+  skipped: { label: "skipped", cls: "text-fg-dim border-border-strong bg-bg-elev" },
+  unknown: { label: "dispatched", cls: "text-violet border-violet/40 bg-violet/10", dot: true },
+};
+
+function ProfoundRuns({ agents }: { agents: AgentRun[] }) {
+  const live = agents.filter((a) => !TERMINAL.has(a.status)).length;
+  return (
+    <div className="bg-bg-panel border border-violet/30 panel-elev rounded-sm overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-border bg-bg-elev flex items-center justify-between">
+        <span className="eyebrow text-violet">⚡ Real Profound agent runs · created by this Execute run</span>
+        {live > 0 ? (
+          <span className="flex items-center gap-1.5 text-[10px] text-blue"><span className="h-1.5 w-1.5 rounded-full bg-blue animate-pulse" /> {live} live</span>
+        ) : (
+          <span className="eyebrow text-green">all settled</span>
+        )}
+      </div>
+      <div className="px-4 py-3">
+        <p className="text-[11px] text-fg-muted mb-2.5">
+          Bastion called the Profound API and started these agent runs <span className="text-fg">on the Profound platform just now</span>. The run IDs are real — status below polls live from Profound (queued → running → succeeded). This is separate from Autopilot.
+        </p>
+        <div className="flex flex-col gap-1.5">
+          {agents.map((a) => {
+            const m = RUN_META[a.status] ?? RUN_META.unknown;
+            return (
+              <div key={a.runId} className="flex items-center gap-3 py-1.5 px-2.5 rounded bg-bg border border-border/60 text-[12px]">
+                <span className="text-violet shrink-0">⚡</span>
+                <span className="text-fg/90 truncate flex-1 min-w-0">{a.agentName}</span>
+                <span className="font-mono text-[10px] text-fg-dim shrink-0 hidden sm:inline">run {a.runId.slice(0, 8)}</span>
+                <span className={`shrink-0 inline-flex items-center gap-1.5 text-[10px] font-medium rounded px-2 py-0.5 border ${m.cls}`}>
+                  {m.dot && <span className="h-1.5 w-1.5 rounded-full bg-current animate-pulse" />}{m.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
