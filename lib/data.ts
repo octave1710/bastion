@@ -75,7 +75,7 @@ export function buildCuratedPrompts(): Prompt[] {
   return CURATED.map((p) => {
     const status = statusFromShare(p.shareOfAnswer, p.leader);
     const value =
-      p.id === HERO_PROMPT_ID ? 1_200_000 : Math.round(annualValue(p.monthlyVolume, p.shareOfAnswer) / 1000) * 1000;
+      p.id === HERO_PROMPT_ID ? 1_200_000 : Math.round(annualValue(p.monthlyVolume) / 1000) * 1000;
     return { ...p, annualValue: value, status };
   });
 }
@@ -135,7 +135,7 @@ export function buildPortfolio(count = 2400): Prompt[] {
       monthlyVolume: volume,
       shareOfAnswer: share,
       leader,
-      annualValue: annualValue(volume, share), // raw, pre-normalization
+      annualValue: annualValue(volume), // raw, pre-normalization
       status,
       cluster: CLUSTERS[Math.floor(rng() * CLUSTERS.length)],
     });

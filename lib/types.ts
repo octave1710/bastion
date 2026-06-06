@@ -103,8 +103,27 @@ export type AgentArtifact =
       tiers: AllocationTier[];
       arbitrage: { bridgeCostMonthly: number; protectedAnnual: number; organicDays: number };
     }
-  | { type: "bid"; platform: string; prompt: string; dailyBudget: number; cpc: number; rationale: string }
-  | { type: "content"; title: string; url: string; claims: string[]; body: string }
+  // #2 — the paid↔organic split: both levers on the hero, orchestrated over time.
+  | {
+      type: "split";
+      paid: { node: string; engine: string; dailyBudget: number; holdsNow: string; autoStop: string };
+      organic: { mode: "update" | "create"; reconquestDay: number; permanent: string };
+      window: { days: number; bridgeCost: number; protectedRevenue: number; positionAnnual: number };
+    }
+  // #1 — paid bridge on the SAME surface as the loss (engine-specific ad node).
+  | { type: "bid"; platform: string; engine: string; prompt: string; dailyBudget: number; cpc: number; rationale: string }
+  // #3 — organic fix as UPDATE (patch an existing cited page) or CREATE (new page).
+  | {
+      type: "content";
+      mode: "update" | "create";
+      title: string;
+      url: string;
+      existingUrl?: string;
+      claims: string[];
+      patchBlocks?: { claim: string; before: string; after: string }[];
+      body: string;
+      actions: string[];
+    }
   // Addendum #2 — self-eval REVISE loop: draft → score → (below threshold) → revise → re-score → ship.
   | {
       type: "self-eval";

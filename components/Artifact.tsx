@@ -15,6 +15,7 @@ export function Artifact({ artifact }: { artifact: AgentArtifact }) {
     >
       {artifact.type === "teardown" && <TeardownCard a={artifact} />}
       {artifact.type === "allocation" && <AllocationCard a={artifact} />}
+      {artifact.type === "split" && <SplitCard a={artifact} />}
       {artifact.type === "bid" && <BidCard a={artifact} />}
       {artifact.type === "content" && <ContentCard a={artifact} />}
       {artifact.type === "self-eval" && <SelfEvalCard a={artifact} />}
@@ -136,14 +137,81 @@ function Stat({ label, value, color }: { label: string; value: string; color: st
   );
 }
 
+// #2 — the paid↔organic split: the differentiator beat, both levers + timeline.
+function SplitCard({ a }: { a: Extract<AgentArtifact, { type: "split" }> }) {
+  const roi = Math.round(a.window.protectedRevenue / a.window.bridgeCost);
+  return (
+    <>
+      <Header tag="◎ Orchestration · paid ↔ organic" color="var(--green)" label="one position · two levers" />
+      <div className="px-3 py-2.5">
+        <div className="grid grid-cols-2 gap-2">
+          {/* PAID lever */}
+          <div className="rounded border border-blue/30 bg-blue/[0.06] p-2.5">
+            <div className="flex items-center justify-between">
+              <span className="eyebrow !text-[9px] text-blue">Paid bridge</span>
+              <span className="tnum text-blue text-sm">{fmtUSD(a.paid.dailyBudget)}/day</span>
+            </div>
+            <p className="mt-1 text-[11px] text-fg/90">
+              {a.paid.node} · <span className="text-fg-muted">{a.paid.engine}</span>
+            </p>
+            <p className="mt-1 text-[10px] text-blue/90">▸ {a.paid.holdsNow}</p>
+            <p className="text-[10px] text-fg-dim">▸ {a.paid.autoStop}</p>
+          </div>
+          {/* ORGANIC lever */}
+          <div className="rounded border border-violet/30 bg-violet/[0.06] p-2.5">
+            <div className="flex items-center justify-between">
+              <span className="eyebrow !text-[9px] text-violet">Organic win</span>
+              <span className="tnum text-violet text-sm uppercase">{a.organic.mode}</span>
+            </div>
+            <p className="mt-1 text-[11px] text-fg/90">reconquest ~Day {a.organic.reconquestDay}</p>
+            <p className="mt-1 text-[10px] text-violet/90">▸ {a.organic.permanent}</p>
+            <p className="text-[10px] text-fg-dim">▸ in progress</p>
+          </div>
+        </div>
+
+        {/* Timeline: paid active until organic goes green, then paid → $0 */}
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between text-[9px] text-fg-dim mb-1">
+            <span>Day 0</span>
+            <span>reconquest · Day {a.window.days}</span>
+          </div>
+          <div className="relative h-5 rounded bg-bg overflow-hidden border border-border">
+            <div className="absolute inset-y-0 left-0 bg-blue/30 border-r border-blue/60" style={{ width: "62%" }}>
+              <span className="absolute inset-0 flex items-center justify-center text-[9px] text-blue">paid bridge ON</span>
+            </div>
+            <div className="absolute inset-y-0 right-0 bg-violet/25" style={{ width: "38%" }}>
+              <span className="absolute inset-0 flex items-center justify-center text-[9px] text-violet">organic green · paid → $0</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Arbitrage math, dollar-grounded on the reconquest window */}
+        <div className="mt-2.5 rounded bg-bg-elev px-2.5 py-2 text-[11px] leading-snug">
+          <span className="text-green">Arbitrage:</span> a{" "}
+          <span className="text-blue tnum">{fmtUSD(a.window.bridgeCost)}</span> bridge over {a.window.days} days protects{" "}
+          <span className="text-green tnum">{fmtUSD(a.window.protectedRevenue)}</span> of at-risk revenue during reconquest
+          (~<span className="tnum">{roi}×</span>) — then paid is cut. <span className="text-fg-muted">Run both, then stop paying.</span>
+          <div className="mt-1 text-[10px] text-fg-dim">
+            Position worth {fmtUSD(a.window.positionAnnual)}/yr · most builders ship organic only — this is the moat.
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function BidCard({ a }: { a: Extract<AgentArtifact, { type: "bid" }> }) {
   return (
     <>
-      <Header tag="◆ Paid bridge" color="var(--blue)" label={a.platform} />
+      <Header tag="◆ Paid bridge" color="var(--blue)" label={`${a.platform} · ${a.engine}`} />
       <div className="px-3 py-2.5 text-[12px]">
         <div className="flex items-baseline justify-between">
           <span className="text-fg-muted">Recommended daily budget</span>
           <span className="tnum text-blue text-lg">{fmtUSD(a.dailyBudget)}/day</span>
+        </div>
+        <div className="mt-1 flex items-baseline justify-between">
+          <span className="text-fg-muted">Surface</span>
+          <span className="text-fg/90">{a.platform} → {a.engine}</span>
         </div>
         <div className="mt-1 flex items-baseline justify-between">
           <span className="text-fg-muted">Target prompt</span>
@@ -163,20 +231,50 @@ function BidCard({ a }: { a: Extract<AgentArtifact, { type: "bid" }> }) {
 }
 
 function ContentCard({ a }: { a: Extract<AgentArtifact, { type: "content" }> }) {
+  const isUpdate = a.mode === "update";
   return (
     <>
-      <Header tag="◆ Organic counter-page" color="var(--violet)" label={a.url} />
+      <Header
+        tag={isUpdate ? "◆ Organic · UPDATE existing page" : "◆ Organic · CREATE new page"}
+        color="var(--violet)"
+        label={isUpdate ? a.existingUrl ?? a.url : a.url}
+      />
       <div className="px-3 py-2.5 text-[12px]">
         <p className="text-fg font-medium leading-snug">{a.title}</p>
-        <ul className="mt-2 space-y-1">
-          {a.claims.map((c, i) => (
-            <li key={i} className="flex gap-1.5 text-[11px] text-fg-muted leading-snug">
-              <span className="text-violet">↳</span>
-              <span>{c}</span>
-            </li>
-          ))}
-        </ul>
+        {isUpdate && a.patchBlocks ? (
+          <div className="mt-2 space-y-1.5">
+            {a.patchBlocks.map((b, i) => (
+              <div key={i} className="rounded border border-border bg-bg overflow-hidden text-[11px]">
+                <div className="px-2 py-0.5 bg-bg-elev eyebrow !text-[8px] text-fg-dim">{b.claim}</div>
+                <div className="px-2 py-1 text-red/80 line-through decoration-red/40">- {b.before}</div>
+                <div className="px-2 py-1 text-green border-t border-border">+ {b.after}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <ul className="mt-2 space-y-1">
+            {a.claims.map((c, i) => (
+              <li key={i} className="flex gap-1.5 text-[11px] text-fg-muted leading-snug">
+                <span className="text-violet">↳</span>
+                <span>{c}</span>
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="mt-2 text-[11px] text-fg-dim leading-snug">{a.body}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {a.actions.map((act, i) => (
+            <span
+              key={i}
+              className={`rounded px-2 py-0.5 text-[10px] border ${
+                i === 0 ? "border-violet/50 text-violet bg-violet/10" : "border-border-strong text-fg-muted"
+              }`}
+            >
+              {act}
+            </span>
+          ))}
+          <span className="ml-auto text-[10px] text-amber">⛔ human approval gate · never auto-publishes</span>
+        </div>
       </div>
     </>
   );

@@ -1,56 +1,40 @@
-import type { EconomicsInputs } from "./types";
-
 // ─────────────────────────────────────────────────────────────────────────────
-// The dollar value of a defended position.
+// The dollar value of a position — Bastion's moat. Profound stops at visibility;
+// we add the dollar layer on top.
 //
-//   value = monthly_volume × share_delta × click_through × conversion × ACV
+//   value/yr = monthly_volume × 12 × click_through × conversion × ACV
 //
-// This is *illustrative unit economics* — the mechanism is the point. We surface
-// every assumption on screen so a Stripe/Ramp judge sees we know it's a model,
-// not a measurement.
+// monthly_volume is REAL Profound data. The other three are ADJUSTABLE,
+// labeled assumptions — an owned model, never a measurement. Defaults hold the
+// hero ("best AI for coding", 74k/mo) at ~$1.2M/yr so the §7 demo stays coherent;
+// the UI exposes them as editable so you can model your own business live.
 // ─────────────────────────────────────────────────────────────────────────────
 
-// Calibrated so the hero prompt ("best AI for coding", 74k/mo, 18pt share
-// defended) values to ~$1.2M/yr — matching the headline — and the full
-// portfolio ladders to ~$4.2M/mo. Conservative, defensible inputs.
-export const DEFAULT_ASSUMPTIONS = {
-  clickThrough: 0.06, // est. click-through from an AI answer citation to site
-  conversionRate: 0.005, // site visitor → closed-won (top-of-funnel, conservative)
-  acv: 25_000, // average contract value ($)
-};
-
-/** Monthly defended revenue for a single position. */
-export function monthlyValue({
-  monthlyVolume,
-  shareDelta,
-  clickThrough,
-  conversionRate,
-  acv,
-}: EconomicsInputs): number {
-  return monthlyVolume * shareDelta * clickThrough * conversionRate * acv;
+export interface Assumptions {
+  clickThrough: number; // est. click-through from an AI answer citation to site
+  conversionRate: number; // site visitor → closed-won
+  acv: number; // average contract value ($)
 }
 
-/** Annualized value of a position, using the default assumptions. */
-export function annualValue(monthlyVolume: number, shareDelta: number): number {
-  return (
-    monthlyValue({
-      monthlyVolume,
-      shareDelta,
-      clickThrough: DEFAULT_ASSUMPTIONS.clickThrough,
-      conversionRate: DEFAULT_ASSUMPTIONS.conversionRate,
-      acv: DEFAULT_ASSUMPTIONS.acv,
-    }) * 12
-  );
+export const DEFAULT_ASSUMPTIONS: Assumptions = {
+  clickThrough: 0.09,
+  conversionRate: 0.0075,
+  acv: 2_000,
+};
+
+/** Annual dollar value of a position. */
+export function annualValue(monthlyVolume: number, a: Assumptions = DEFAULT_ASSUMPTIONS): number {
+  return monthlyVolume * 12 * a.clickThrough * a.conversionRate * a.acv;
 }
 
 /** Human-readable rendering of the formula with concrete numbers plugged in. */
-export function formulaBreakdown(i: EconomicsInputs) {
+export function formulaBreakdown(monthlyVolume: number, a: Assumptions = DEFAULT_ASSUMPTIONS) {
   return [
-    { label: "Monthly prompt volume", value: fmtInt(i.monthlyVolume) },
-    { label: "Share-of-answer defended", value: pct(i.shareDelta) },
-    { label: "Click-through to site", value: pct(i.clickThrough) },
-    { label: "Conversion rate", value: pct(i.conversionRate) },
-    { label: "Average contract value", value: fmtUSD(i.acv) },
+    { label: "Monthly prompt volume", value: fmtInt(monthlyVolume), real: true },
+    { label: "× months / year", value: "12", real: true },
+    { label: "Click-through to site", value: pct(a.clickThrough), key: "clickThrough" as const },
+    { label: "Conversion rate", value: pct(a.conversionRate), key: "conversionRate" as const },
+    { label: "Average contract value", value: fmtUSD(a.acv), key: "acv" as const },
   ];
 }
 
@@ -79,5 +63,6 @@ export function fmtInt(n: number): string {
 }
 
 export function pct(n: number): string {
-  return `${(n * 100).toFixed(n < 0.1 ? 1 : 0)}%`;
+  const p = n * 100;
+  return `${p < 1 ? p.toFixed(2) : p.toFixed(p < 10 ? 1 : 0)}%`;
 }

@@ -125,7 +125,7 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
         monthlyVolume: volume,
         shareOfAnswer: share,
         leader,
-        annualValue: Math.round(annualValue(volume, share)),
+        annualValue: Math.round(annualValue(volume)),
         status: statusFor(share, leader),
         cluster: p.topic?.name ?? "Live",
       };
