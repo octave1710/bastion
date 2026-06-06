@@ -6,12 +6,19 @@ import { findAeoContent, type AeoContent } from "@/lib/aeo-content";
 // is always concrete. Never returns scripted placeholder.
 export const dynamic = "force-dynamic";
 
-const SYSTEM = `You are an AEO (Answer Engine Optimization) content engineer for Anthropic.
-Given a high-intent prompt where Claude/Anthropic is LOSING AI share of voice, write the
-citable answer block that would win the AI citation. Be factual and specific to Claude/
-Anthropic (BAA/HIPAA, no-training-on-API-data, large context, Agent SDK, Bedrock/Vertex,
-SOC2/ISO). Output STRICT JSON: {"title": string, "format": "answer block"|"FAQ"|"comparison",
-"answer": string (90-140 words, direct answer first), "keyFacts": string[3]}.`;
+const SYSTEM = `You are a senior AEO (Answer Engine Optimization) content engineer for Anthropic.
+Given a high-intent prompt where Claude/Anthropic is LOSING AI share of voice, write a
+COMPLETE, publish-ready page engineered to win the AI citation — not a snippet.
+Be factual and specific to Claude/Anthropic (BAA/HIPAA, no-training-on-API-data, 200K+
+context, Claude Code + Agent SDK, AWS Bedrock / Google Vertex, SOC 2 Type II / ISO 27001,
+Constitutional AI). Use a clear citable answer up top, then structured H2 sections, a short
+comparison, and a 2-3 item FAQ. Output STRICT JSON:
+{"title": string (SEO/AEO H1),
+ "metaDescription": string (<=160 chars),
+ "answer": string (the 40-60 word citable lead answer engines quote),
+ "body": string (FULL article in Markdown, 450-650 words: lead answer, 2-3 ## sections,
+   a brief comparison, and a "## FAQ" with 2-3 Q&As),
+ "keyFacts": string[3]}.`;
 
 async function generateLive(prompt: string): Promise<AeoContent | null> {
   const key = process.env.OPENAI_API_KEY?.trim();
@@ -38,9 +45,11 @@ async function generateLive(prompt: string): Promise<AeoContent | null> {
     const j = JSON.parse(raw);
     return {
       match: prompt.toLowerCase(),
-      format: j.format ?? "answer block",
+      format: "answer block",
       title: String(j.title ?? prompt),
+      metaDescription: j.metaDescription ? String(j.metaDescription) : undefined,
       answer: String(j.answer ?? ""),
+      body: j.body ? String(j.body) : undefined,
       keyFacts: Array.isArray(j.keyFacts) ? j.keyFacts.slice(0, 3).map(String) : [],
     };
   } catch {

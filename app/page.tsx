@@ -272,7 +272,7 @@ export default function WarRoom() {
 
       {view === "execute" && (
         <main className="flex-1 px-6 py-5 overflow-y-auto">
-          <ExecuteView prompts={portfolioPrompts} />
+          <ExecuteView prompts={portfolioPrompts} brandKpis={data.brandKpis} brand={data.brand} />
         </main>
       )}
       {view === "levers" && (

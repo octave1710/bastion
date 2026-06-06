@@ -11,8 +11,11 @@ export interface AeoContent {
   match: string;
   format: "answer block" | "FAQ" | "comparison";
   title: string;
+  metaDescription?: string;
   /** the citable answer engineered to win the AI citation */
   answer: string;
+  /** the FULL publish-ready article in Markdown (live generation) */
+  body?: string;
   /** the structured, quotable facts engines lift into answers */
   keyFacts: string[];
 }

@@ -1,27 +1,26 @@
-import { runProfoundAgent } from "@/lib/profound/server";
-import { HERO_PROMPT } from "@/lib/data";
+import { dispatchProfoundAgent, listProfoundAgents } from "@/lib/profound/server";
 
-// Executes the Profound-native agent (the same detect→…→act loop, registered
-// inside Profound via MCP). If no agent id / key is configured, returns a
-// simulated run so the War Room's "execute" beat always has something to show.
+export const dynamic = "force-dynamic";
+
+// GET → the real published Profound agents (for showing what Bastion orchestrates).
+export async function GET() {
+  const agents = await listProfoundAgents();
+  return Response.json({ agents: agents.slice(0, 40) }, { headers: { "Cache-Control": "no-store" } });
+}
+
+// POST → actually DISPATCH a real Profound agent run on the platform.
 export async function POST(req: Request) {
-  let input: Record<string, unknown> = { prompt: HERO_PROMPT.text };
+  let prefer = "citation gap|aeo|article";
   try {
-    input = { ...input, ...(await req.json()) };
+    const body = await req.json();
+    if (typeof body?.prefer === "string" && body.prefer.trim()) prefer = body.prefer.trim();
   } catch {
-    /* empty body is fine */
+    /* default */
   }
-
-  const run = await runProfoundAgent(input);
-  if (run) {
-    return Response.json({ source: "live", run });
-  }
+  const run = await dispatchProfoundAgent(prefer);
+  if (run) return Response.json({ source: "live", ...run });
   return Response.json({
-    source: "simulated",
-    run: {
-      id: "sim-run",
-      status: "completed",
-      note: "Set PROFOUND_AGENT_ID + PROFOUND_API_KEY to execute the real Profound agent.",
-    },
+    source: "unavailable",
+    note: "Set PROFOUND_API_KEY to dispatch real Profound agents.",
   });
 }

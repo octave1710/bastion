@@ -234,19 +234,51 @@ export async function fetchLivePortfolio(): Promise<LivePortfolio | null> {
   }
 }
 
-// ── Profound-native agent execution (for the native prize) ───────────────────
+// ── Profound-native agent execution ──────────────────────────────────────────
 
-export async function listProfoundAgents(): Promise<any[] | null> {
+export async function listProfoundAgents(): Promise<{ id: string; name: string }[]> {
+  const client = getClient();
+  if (!client) return [];
+  try {
+    return rows(await (client as any).agents.list())
+      .filter((a: any) => a.status === "published")
+      .map((a: any) => ({ id: String(a.id), name: String(a.name) }));
+  } catch {
+    return [];
+  }
+}
+
+// Pick a relevant published agent by name keyword (e.g., the AEO/citation agents).
+async function pickAgent(prefer: string): Promise<{ id: string; name: string } | null> {
+  const agents = await listProfoundAgents();
+  if (!agents.length) return null;
+  const env = process.env.PROFOUND_AGENT_ID?.trim();
+  if (env) {
+    const m = agents.find((a) => a.id === env);
+    if (m) return m;
+  }
+  const re = new RegExp(prefer, "i");
+  return agents.find((a) => re.test(a.name)) ?? agents[0];
+}
+
+/** Dispatch a REAL Profound agent run. Returns { runId, agentName, status } or null. */
+export async function dispatchProfoundAgent(prefer = "citation gap|aeo|article"): Promise<
+  { runId: string; agentName: string; status: string } | null
+> {
   const client = getClient();
   if (!client) return null;
+  const agent = await pickAgent(prefer);
+  if (!agent) return null;
   try {
-    return rows(await (client as any).agents.list());
-  } catch {
+    const run = await (client as any).agents.runs.create(agent.id, {});
+    return { runId: String(run.id ?? "run"), agentName: agent.name, status: String(run.status ?? "queued") };
+  } catch (err) {
+    console.error("[profound] agent dispatch failed:", err);
     return null;
   }
 }
 
-/** Execute a registered Profound agent run. Returns the run object or null. */
+/** Legacy single-run helper. */
 export async function runProfoundAgent(input: Record<string, unknown>): Promise<any | null> {
   const client = getClient();
   const agentId = process.env.PROFOUND_AGENT_ID?.trim();

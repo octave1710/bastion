@@ -12,9 +12,9 @@
   --bg-elev: #14171d; /* elevated rows / hover */
   --border: #1d212a; /* hairline borders */
   --border-strong: #2a2f3a;
-  --fg: #e6e8ec; /* primary text */
-  --fg-muted: #8a909c; /* secondary text */
-  --fg-dim: #565d6b; /* tertiary / labels */
+  --fg: #eef1f5; /* primary text */
+  --fg-muted: #a8aeba; /* secondary text — lifted for contrast */
+  --fg-dim: #79808e; /* tertiary / labels — lifted for readability */
 
   --green: #19e07a; /* winning */
   --green-dim: #0c6e3d;
