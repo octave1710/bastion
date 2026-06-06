@@ -4,7 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Prompt } from "@/lib/types";
 import { BrandKpis, type BrandKpiData } from "./BrandKpis";
-import { compactUSD, fmtInt } from "@/lib/economics";
+import { annualValue, compactUSD, fmtInt, fmtUSD, DEFAULT_ASSUMPTIONS, type Assumptions } from "@/lib/economics";
 
 interface Teardown { whyTheyWin: string[]; counter: string[]; source?: string }
 
@@ -25,18 +25,19 @@ export function DiagnoseView({
   profoundUrl?: string;
   onExecute: () => void;
 }) {
+  // Editable $ model — transparent + adjustable. Volume is real Profound data;
+  // the rest are labeled assumptions. winnable = value × the share we can still take.
+  const [a, setA] = useState<Assumptions>(DEFAULT_ASSUMPTIONS);
+  const winnableOf = (p: Prompt) => annualValue(p.monthlyVolume, a) * Math.max(0.05, 0.45 - p.shareOfAnswer);
+
   const { gaps, winnable, threats } = useMemo(() => {
-    const gaps = prompts
-      .filter((p) => p.status !== "winning")
-      .sort((a, b) => b.annualValue - a.annualValue)
-      .slice(0, 12);
-    const winnable = gaps.reduce((a, p) => a + p.annualValue * Math.max(0, 0.45 - p.shareOfAnswer), 0);
-    // Who actually takes our citations across the prompts (consistent with the table).
+    const gaps = prompts.filter((p) => p.status !== "winning").sort((x, y) => y.annualValue - x.annualValue).slice(0, 12);
+    const winnable = gaps.reduce((acc, p) => acc + annualValue(p.monthlyVolume, a) * Math.max(0, 0.45 - p.shareOfAnswer), 0);
     const counts = new Map<string, number>();
     prompts.filter((p) => p.leader && p.leader !== "us").forEach((p) => counts.set(String(p.leader), (counts.get(String(p.leader)) ?? 0) + 1));
-    const threats = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([name, count]) => ({ name, count }));
+    const threats = [...counts.entries()].sort((x, y) => y[1] - x[1]).slice(0, 3).map(([name, count]) => ({ name, count }));
     return { gaps, winnable, threats };
-  }, [prompts]);
+  }, [prompts, a]);
 
   const kpisDisplay = threats.length ? { ...brandKpis, competitors: threats } : brandKpis;
 
@@ -85,6 +86,19 @@ export function DiagnoseView({
             </button>
           </div>
         </div>
+        {/* Transparent, editable $ model */}
+        <div className="px-4 py-2 border-b border-border bg-bg flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11px]">
+          <span className="font-mono text-fg-dim">winnable/yr = </span>
+          <span className="font-mono text-green">volume<span className="text-fg-dim text-[9px]"> (real Profound)</span></span>
+          <span className="font-mono text-fg-dim">× 12 ×</span>
+          <Assume label="CTR" suffix="%" value={Number((a.clickThrough * 100).toFixed(2))} step={1} onChange={(v) => setA({ ...a, clickThrough: Math.max(0, v) / 100 })} />
+          <span className="font-mono text-fg-dim">×</span>
+          <Assume label="conv" suffix="%" value={Number((a.conversionRate * 100).toFixed(2))} step={0.25} onChange={(v) => setA({ ...a, conversionRate: Math.max(0, v) / 100 })} />
+          <span className="font-mono text-fg-dim">×</span>
+          <Assume label="ACV" prefix="$" value={a.acv} step={500} onChange={(v) => setA({ ...a, acv: Math.max(0, v) })} />
+          <span className="font-mono text-fg-dim">× share-to-win</span>
+          <span className="ml-auto text-amber">illustrative model · edit to your business</span>
+        </div>
         <table className="w-full text-[13px]">
           <thead>
             <tr className="text-fg-dim eyebrow !text-[9px] text-left">
@@ -108,7 +122,7 @@ export function DiagnoseView({
                     <td className="px-3 py-2 text-fg-dim">{p.cluster}</td>
                     <td className="px-3 py-2 text-right tnum text-red">{Math.round(p.shareOfAnswer * 100)}%</td>
                     <td className="px-3 py-2 text-fg-muted">{String(p.leader)}</td>
-                    <td className="px-4 py-2 text-right tnum text-green">+{compactUSD(p.annualValue * Math.max(0.05, 0.45 - p.shareOfAnswer))}</td>
+                    <td className="px-4 py-2 text-right tnum text-green">+{compactUSD(winnableOf(p))}</td>
                   </tr>
                   <AnimatePresence>
                     {isOpen && (
@@ -147,5 +161,16 @@ export function DiagnoseView({
         </div>
       </div>
     </div>
+  );
+}
+
+function Assume({ label, value, onChange, step, prefix, suffix }: { label: string; value: number; onChange: (v: number) => void; step: number; prefix?: string; suffix?: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <span className="text-fg-dim">{label}</span>
+      {prefix && <span className="text-fg-dim">{prefix}</span>}
+      <input type="number" step={step} min={0} value={value} onChange={(e) => onChange(Number(e.target.value))} className="tnum w-14 bg-bg-elev border border-border-strong rounded px-1.5 py-0.5 text-right text-amber focus:border-amber outline-none" />
+      {suffix && <span className="text-fg-dim">{suffix}</span>}
+    </span>
   );
 }
