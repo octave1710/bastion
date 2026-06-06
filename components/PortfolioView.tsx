@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import type { Prompt } from "@/lib/types";
-import { decide, DEFAULT_POLICY, type Decision } from "@/lib/policy";
+import { decide, DEFAULT_POLICY, type Decision, type Policy } from "@/lib/policy";
 import { compactUSD, fmtInt } from "@/lib/economics";
 
 type SortKey = "value" | "share" | "demand";
@@ -16,14 +16,14 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
 
 // Every real position, triaged by ROI. The "thousands of dimensions" capability,
 // made inspectable: sortable, with the agent's decision on each.
-export function PortfolioView({ prompts }: { prompts: Prompt[] }) {
+export function PortfolioView({ prompts, policy = DEFAULT_POLICY }: { prompts: Prompt[]; policy?: Policy }) {
   const [sort, setSort] = useState<SortKey>("value");
   const decisions = useMemo(() => {
-    const d = decide(prompts, DEFAULT_POLICY);
+    const d = decide(prompts, policy);
     const key = (x: Decision) =>
       sort === "value" ? x.value : sort === "share" ? x.prompt.shareOfAnswer : x.prompt.monthlyVolume;
     return d.sort((a, b) => key(b) - key(a));
-  }, [prompts, sort]);
+  }, [prompts, sort, policy]);
 
   return (
     <div className="bg-bg-panel border border-border panel-elev rounded-sm overflow-hidden">

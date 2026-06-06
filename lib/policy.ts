@@ -10,13 +10,15 @@ import { DEFAULT_ASSUMPTIONS, type Assumptions } from "./economics";
 
 export interface Policy {
   defendThreshold: number; // $/yr below which we skip (capital is finite)
-  maxPaidPerDay: number; // guardrail on total paid bridge spend
+  maxPaidPerDay: number; // guardrail on per-bridge paid spend
+  requireApproval: boolean; // human gate before any spend/publish
   assumptions: Assumptions;
 }
 
 export const DEFAULT_POLICY: Policy = {
-  defendThreshold: 12_000,
+  defendThreshold: 150_000, // $/yr — splits the live portfolio into defend vs skip
   maxPaidPerDay: 2_000,
+  requireApproval: true,
   assumptions: DEFAULT_ASSUMPTIONS,
 };
 

@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import type { Prompt } from "@/lib/types";
 import { buildPortfolio } from "@/lib/data";
-import { decide, DEFAULT_POLICY } from "@/lib/policy";
+import { decide, DEFAULT_POLICY, type Policy } from "@/lib/policy";
 import { squarify } from "@/lib/treemap";
 import { compactUSD, fmtInt } from "@/lib/economics";
 
@@ -24,10 +24,12 @@ export function ScaleReveal({
   open,
   onClose,
   prompts,
+  policy = DEFAULT_POLICY,
 }: {
   open: boolean;
   onClose?: () => void;
   prompts?: Prompt[];
+  policy?: Policy;
 }) {
   const portfolio = useMemo(
     () => (prompts && prompts.length ? prompts : buildPortfolio(140)),
@@ -39,7 +41,7 @@ export function ScaleReveal({
     const rects = squarify(items, 100, 58);
     const value = portfolio.reduce((a, p) => a + p.annualValue, 0);
     const winning = portfolio.filter((p) => p.status === "winning").length;
-    const ds = decide(portfolio, DEFAULT_POLICY);
+    const ds = decide(portfolio, policy);
     const decStatus = new Map(ds.map((d) => [d.prompt.id, d.status]));
     const movers = [...portfolio].sort((a, b) => b.annualValue - a.annualValue).slice(0, 7);
     return {
@@ -49,7 +51,7 @@ export function ScaleReveal({
       decisions: ds.slice(0, 14),
       decStatus,
     };
-  }, [portfolio]);
+  }, [portfolio, policy]);
 
   if (!open) return null;
 

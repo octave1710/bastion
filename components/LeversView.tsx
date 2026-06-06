@@ -3,27 +3,45 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import type { Prompt } from "@/lib/types";
-import { decide, roiLedger, DEFAULT_POLICY } from "@/lib/policy";
+import { decide, roiLedger, type Policy } from "@/lib/policy";
 import { compactUSD, fmtUSD, fmtInt } from "@/lib/economics";
+import { SendAlert } from "./SendAlert";
 
-// The Paid ↔ Organic monitoring console + ROI ledger. Every row is a REAL decision
-// the agent made on a REAL Profound prompt. This is the "it actually runs" view.
-export function LeversView({ prompts }: { prompts: Prompt[] }) {
+// The Paid ↔ Organic monitoring console + ROI ledger + the EDITABLE agent policy.
+// Every row is a REAL decision on a REAL Profound prompt, and changing the policy
+// recomputes everything live — the agent is governable, not a black box.
+export function LeversView({
+  prompts,
+  policy,
+  onPolicyChange,
+}: {
+  prompts: Prompt[];
+  policy: Policy;
+  onPolicyChange: (p: Policy) => void;
+}) {
   const { decisions, ledger } = useMemo(() => {
-    const decisions = decide(prompts, DEFAULT_POLICY).sort((a, b) => b.value - a.value);
+    const decisions = decide(prompts, policy).sort((a, b) => b.value - a.value);
     return { decisions, ledger: roiLedger(decisions) };
-  }, [prompts]);
+  }, [prompts, policy]);
 
   const paid = decisions.filter((d) => d.status === "paid-active");
   const organic = decisions.filter((d) => d.status === "organic-progress" || d.status === "holding");
 
   return (
     <div className="flex flex-col gap-5">
+      <PolicyBar policy={policy} onChange={onPolicyChange} counts={ledger.counts} />
+
       {/* ROI ledger — CFO-grade */}
       <div>
         <div className="flex items-center justify-between mb-2">
           <span className="eyebrow text-fg-muted">ROI ledger · the dollar outcome</span>
-          <span className="eyebrow text-fg-dim">policy: defend ≥ {fmtUSD(DEFAULT_POLICY.defendThreshold)}/yr · paid cap {fmtUSD(DEFAULT_POLICY.maxPaidPerDay)}/day</span>
+          <SendAlert
+            getMessage={() =>
+              `🛡 *Bastion digest* — defending ${compactUSD(ledger.defended)}/yr across ${ledger.counts.defend} positions.\n` +
+              `${ledger.counts.paid} paid bridges live (${compactUSD(ledger.paidMonthly)}/mo), ${ledger.counts.organic} held organically, ${ledger.counts.skip} skipped by ROI.\n` +
+              `Revenue at risk: ${compactUSD(ledger.atRisk)}/yr · Net ROI ${ledger.netRoiX}×.`
+            }
+          />
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-px bg-border border border-border panel-elev rounded-sm overflow-hidden">
           <Ledger label="Defended /yr" value={compactUSD(ledger.defended)} color="var(--green)" big />
@@ -84,6 +102,79 @@ export function LeversView({ prompts }: { prompts: Prompt[] }) {
             </Row>
           ))}
         </LeverColumn>
+      </div>
+    </div>
+  );
+}
+
+// The governable brain: edit the rules, every view recomputes live.
+function PolicyBar({
+  policy,
+  onChange,
+  counts,
+}: {
+  policy: Policy;
+  onChange: (p: Policy) => void;
+  counts: { defend: number; skip: number; paid: number };
+}) {
+  return (
+    <div className="bg-bg-panel border border-border panel-elev rounded-sm overflow-hidden">
+      <div className="px-4 py-2 border-b border-border bg-bg-elev flex items-center justify-between">
+        <span className="eyebrow text-fg-muted">Agent policy · your guardrails (editable)</span>
+        <span className="text-[11px] text-fg-dim">
+          <span className="text-green tnum">{counts.defend}</span> defend ·{" "}
+          <span className="text-fg-dim tnum">{counts.skip}</span> skip ·{" "}
+          <span className="text-blue tnum">{counts.paid}</span> paid
+        </span>
+      </div>
+      <div className="px-4 py-3 grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr] gap-4 items-center">
+        {/* Defend threshold — the live slider that moves positions defend↔skip */}
+        <div>
+          <div className="flex items-center justify-between text-[11px] mb-1">
+            <span className="text-fg-muted">Defend threshold</span>
+            <span className="tnum text-green">{compactUSD(policy.defendThreshold)}/yr</span>
+          </div>
+          <input
+            type="range"
+            min={0}
+            max={1_200_000}
+            step={10_000}
+            value={policy.defendThreshold}
+            onChange={(e) => onChange({ ...policy, defendThreshold: Number(e.target.value) })}
+            className="w-full accent-green"
+          />
+          <div className="text-[10px] text-fg-dim mt-0.5">positions below this are skipped — capital is finite</div>
+        </div>
+        {/* Paid cap */}
+        <div>
+          <div className="text-[11px] text-fg-muted mb-1">Paid cap / bridge</div>
+          <div className="flex items-center gap-1">
+            <span className="text-fg-dim text-[11px]">$</span>
+            <input
+              type="number"
+              step={100}
+              min={0}
+              value={policy.maxPaidPerDay}
+              onChange={(e) => onChange({ ...policy, maxPaidPerDay: Math.max(0, Number(e.target.value)) })}
+              className="tnum w-24 bg-bg border border-border-strong rounded px-2 py-1 text-right text-blue focus:border-blue outline-none"
+            />
+            <span className="text-fg-dim text-[11px]">/day</span>
+          </div>
+        </div>
+        {/* Approval gate */}
+        <div>
+          <div className="text-[11px] text-fg-muted mb-1">Approval gate</div>
+          <button
+            onClick={() => onChange({ ...policy, requireApproval: !policy.requireApproval })}
+            className={`px-3 py-1 rounded text-[11px] border transition ${
+              policy.requireApproval
+                ? "border-amber/50 text-amber bg-amber/10"
+                : "border-border-strong text-fg-dim"
+            }`}
+          >
+            {policy.requireApproval ? "⛔ human approves spend/publish" : "○ auto (off)"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -14,8 +14,10 @@ import { EconomicsPanel } from "@/components/EconomicsPanel";
 import { ScaleReveal } from "@/components/ScaleReveal";
 import { Ambiance } from "@/components/Ambiance";
 import { LeversView } from "@/components/LeversView";
+import { ConquerView } from "@/components/ConquerView";
 import { PortfolioView } from "@/components/PortfolioView";
 import { DefendedLog, type DefenseEntry } from "@/components/DefendedLog";
+import { DEFAULT_POLICY, type Policy } from "@/lib/policy";
 import { compactUSD } from "@/lib/economics";
 
 interface DataSource {
@@ -55,6 +57,7 @@ export default function WarRoom() {
   }, [state.phase]);
   const [data, setData] = useState<DataSource>({ source: "demo", brand: "Anthropic", count: 2400, prompts: [] });
   const [view, setView] = useState<View>("warroom");
+  const [policy, setPolicy] = useState<Policy>(DEFAULT_POLICY);
 
   // Prompts feeding the Levers + Portfolio views: real live data when available,
   // else a representative demo portfolio so the views are never empty.
@@ -237,12 +240,17 @@ export default function WarRoom() {
 
       {view === "levers" && (
         <main className="flex-1 px-6 py-5 overflow-y-auto">
-          <LeversView prompts={portfolioPrompts} />
+          <LeversView prompts={portfolioPrompts} policy={policy} onPolicyChange={setPolicy} />
+        </main>
+      )}
+      {view === "conquer" && (
+        <main className="flex-1 px-6 py-5 overflow-y-auto">
+          <ConquerView prompts={portfolioPrompts} policy={policy} />
         </main>
       )}
       {view === "portfolio" && (
         <main className="flex-1 px-6 py-5 overflow-y-auto">
-          <PortfolioView prompts={portfolioPrompts} />
+          <PortfolioView prompts={portfolioPrompts} policy={policy} />
         </main>
       )}
 
