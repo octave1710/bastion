@@ -26,10 +26,16 @@ const DEMO_KPIS: BrandKpiData = {
 interface DataSource {
   source: "demo" | "live";
   brand: string;
+  category?: string;
   count: number;
   prompts: Prompt[];
   brandKpis: BrandKpiData;
   profoundUrl?: string;
+}
+
+// Never let degenerate/empty KPIs reach the hero cards (0.0% / rank 0 of 0).
+function kpisHealthy(k?: BrandKpiData): boolean {
+  return !!k && k.fieldSize > 0 && k.shareOfVoice > 0 && k.visibilityScore > 0;
 }
 
 export default function Bastion() {
@@ -42,12 +48,16 @@ export default function Bastion() {
       .then((r) => r.json())
       .then((d) => {
         if (cancelled) return;
+        const ok = kpisHealthy(d.brandKpis);
+        const prompts: Prompt[] = Array.isArray(d.prompts) && d.prompts.length ? d.prompts : [];
         setData({
-          source: d.source === "live" ? "live" : "demo",
-          brand: d.brand || BRAND,
-          count: Array.isArray(d.prompts) ? d.prompts.length : 0,
-          prompts: Array.isArray(d.prompts) ? d.prompts : [],
-          brandKpis: d.brandKpis || DEMO_KPIS,
+          // Degenerate KPIs → present as demo with the real fallback numbers.
+          source: d.source === "live" && ok ? "live" : "demo",
+          brand: BRAND, // the defended brand is always Anthropic
+          category: d.category,
+          count: prompts.length,
+          prompts,
+          brandKpis: ok ? d.brandKpis : DEMO_KPIS,
           profoundUrl: d.profoundUrl,
         });
       })
@@ -58,7 +68,7 @@ export default function Bastion() {
   }, []);
 
   const prompts = useMemo<Prompt[]>(
-    () => (data.source === "live" && data.prompts.length ? data.prompts : buildPortfolio(60)),
+    () => (data.prompts.length ? data.prompts : buildPortfolio(60)),
     [data]
   );
 
@@ -66,7 +76,7 @@ export default function Bastion() {
     <div className="relative min-h-screen flex flex-col terminal-grid">
       <Ambiance phase="peacetime" />
       <div className="relative z-10 flex flex-col flex-1">
-        <Topbar dataSource={data.source} brand={data.brand} category={data.source === "live" ? data.brand : undefined} syncedCount={data.count} />
+        <Topbar dataSource={data.source} brand={data.brand} category={data.category} syncedCount={data.count} />
         <Tabs view={view} onChange={setView} />
 
         {view === "diagnose" && (

@@ -27,9 +27,15 @@ const DEMO_BRAND_KPIS = {
 
 export async function GET() {
   const live = await fetchLivePortfolio();
-  if (live && live.prompts.length) {
+  // Only serve live data when the headline KPIs are real. Profound's per-asset
+  // visibility queries sometimes come back empty (rate limit / window) → that
+  // would render 0.0% / rank 0 of 0. Never show that: fall back to real demo KPIs.
+  const bk = live?.brandKpis;
+  const kpisOk = !!bk && bk.fieldSize > 0 && bk.shareOfVoice > 0 && bk.visibilityScore > 0;
+  if (live && live.prompts.length && kpisOk) {
     return Response.json(
-      { source: "live", brand: live.brand, prompts: live.prompts, brandKpis: live.brandKpis, keyPresent: true, profoundUrl: PROFOUND_APP_URL },
+      // The DEFENDED brand is always Anthropic; live.brand is the category name.
+      { source: "live", brand: BRAND, category: live.brand, prompts: live.prompts, brandKpis: live.brandKpis, keyPresent: true, profoundUrl: PROFOUND_APP_URL },
       { headers: noStore }
     );
   }
@@ -37,6 +43,7 @@ export async function GET() {
     {
       source: "demo",
       brand: BRAND,
+      category: "Frontier Models",
       prompts: buildCuratedPrompts(),
       brandKpis: DEMO_BRAND_KPIS,
       keyPresent: hasProfoundKey(),
