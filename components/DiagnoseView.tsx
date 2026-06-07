@@ -4,6 +4,7 @@ import { Fragment, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Prompt } from "@/lib/types";
 import { BrandKpis, type BrandKpiData } from "./BrandKpis";
+import { CitationProofLoop } from "./CitationProofLoop";
 import { annualValue, compactUSD, fmtInt, fmtUSD, DEFAULT_ASSUMPTIONS, type Assumptions } from "@/lib/economics";
 
 interface Teardown { whyTheyWin: string[]; counter: string[]; source?: string }
@@ -67,6 +68,9 @@ export function DiagnoseView({
         </div>
         <BrandKpis kpis={kpisDisplay} live={live} />
       </div>
+
+      {/* THE agent action — prove the gap on the live internet, fix it, re-verify */}
+      <CitationProofLoop prompts={prompts} brand={brand} />
 
       {/* The gaps — where we lose, ranked by winnable opportunity */}
       <div className="bg-bg-panel border border-border panel-elev rounded-sm overflow-hidden">

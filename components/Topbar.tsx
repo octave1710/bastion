@@ -1,5 +1,7 @@
 "use client";
 
+import { BastionLogo } from "./BastionLogo";
+
 export function Topbar({
   dataSource = "demo",
   brand = "Anthropic",
@@ -14,15 +16,7 @@ export function Topbar({
   const live = dataSource === "live";
   return (
     <header className="flex items-center justify-between px-6 py-3 border-b border-border bg-bg-panel">
-      <div className="flex items-center gap-2.5">
-        <svg width="22" height="26" viewBox="0 0 22 26" fill="none" className="shrink-0" aria-hidden>
-          <path d="M11 1.5 20 5v8.2c0 6-3.9 9.4-9 11.3-5.1-1.9-9-5.3-9-11.3V5l9-3.5Z" stroke="var(--green)" strokeWidth="1.4" fill="rgba(25,224,122,0.08)" />
-          <path d="M11 8.5v8M7 12.5h8" stroke="var(--green)" strokeWidth="1.4" strokeLinecap="round" />
-        </svg>
-        <span className="text-xl font-semibold tracking-tight text-fg">BASTION</span>
-        <span className="text-border-strong">│</span>
-        <span className="text-sm text-fg-muted">the autonomous AEO operator on Profound</span>
-      </div>
+      <BastionLogo size={27} tagline="the autonomous AEO operator on Profound" />
 
       <div className="flex items-center gap-4">
         <div

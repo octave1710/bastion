@@ -152,6 +152,34 @@ body::before {
 }
 .cell-pop { animation: cell-pop 0.4s ease-out both; }
 
+/* ── BASTION logo: living mark + premium wordmark ─────────────────────────── */
+@keyframes bastion-breathe {
+  0%, 100% { filter: drop-shadow(0 0 3px rgba(25, 224, 122, 0.35)); }
+  50% { filter: drop-shadow(0 0 9px rgba(25, 224, 122, 0.7)); }
+}
+.bastion-mark { animation: bastion-breathe 3.6s ease-in-out infinite; }
+.bastion-word {
+  background: linear-gradient(180deg, #ffffff 0%, #b7f4d6 130%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Soft green aura for the headline agent panel (the Citation Proof Loop). */
+.glow-border-green {
+  box-shadow:
+    0 0 0 1px rgba(25, 224, 122, 0.18),
+    0 0 34px -10px rgba(25, 224, 122, 0.35),
+    0 20px 40px -24px rgba(0, 0, 0, 0.9);
+}
+
+/* Inked "stamp" pop for verdict badges (NOT CITED / CITED). */
+@keyframes stamp-in {
+  0% { opacity: 0; transform: scale(1.6) rotate(-8deg); }
+  60% { opacity: 1; transform: scale(0.94) rotate(-3deg); }
+  100% { transform: scale(1) rotate(-3deg); }
+}
+
 /* Keyboard focus rings — visible, on-brand (accessibility checklist). */
 button:focus-visible,
 [tabindex]:focus-visible {
@@ -161,6 +189,6 @@ button:focus-visible,
 
 /* Respect reduced-motion: kill ambient/looping motion, keep state changes. */
 @media (prefers-reduced-motion: reduce) {
-  .ambient-blob, .pulse-red, .cursor-blink::after { animation: none !important; }
+  .ambient-blob, .pulse-red, .cursor-blink::after, .bastion-mark { animation: none !important; }
   * { scroll-behavior: auto !important; }
 }
