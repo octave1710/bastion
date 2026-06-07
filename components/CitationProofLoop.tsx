@@ -16,9 +16,14 @@ type Phase = "idle" | "checking" | "generating" | "judging" | "done";
 // 1) ask the REAL answer engine who's cited now, 2) generate the winning page,
 // 3) a judge agent rules whether our page would now be cited. Perceive → act →
 // verify, with real API calls. The agent checks its own work against reality.
+// High-leverage prompts where the gap is undeniable and the live engine reliably
+// cites third parties (not Anthropic). Always selectable + a cached fallback exists.
+const SPOTLIGHT = ["AI vendors that sign a BAA for HIPAA", "Most private AI chatbot", "Best AI API for startups"];
+
 export function CitationProofLoop({ prompts, brand }: { prompts: Prompt[]; brand: string }) {
-  const gaps = prompts.filter((p) => p.status !== "winning").sort((a, b) => b.annualValue - a.annualValue).slice(0, 8);
-  const [prompt, setPrompt] = useState(gaps[0]?.text ?? "");
+  const liveGaps = prompts.filter((p) => p.status !== "winning").sort((a, b) => b.annualValue - a.annualValue).slice(0, 8).map((p) => p.text);
+  const options = Array.from(new Set([...SPOTLIGHT, ...liveGaps])).slice(0, 12);
+  const [prompt, setPrompt] = useState(options[0] ?? "");
   const [phase, setPhase] = useState<Phase>("idle");
   const [check, setCheck] = useState<CheckResult | null>(null);
   const [gen, setGen] = useState<GenResult | null>(null);
@@ -74,7 +79,7 @@ export function CitationProofLoop({ prompts, brand }: { prompts: Prompt[]; brand
             disabled={running}
             className="flex-1 min-w-0 bg-bg border border-border-strong rounded px-3 py-2 text-[13px] text-fg/90 outline-none focus:border-green disabled:opacity-60"
           >
-            {gaps.map((g) => <option key={g.id} value={g.text}>{g.text}</option>)}
+            {options.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
           <button
             onClick={run}
