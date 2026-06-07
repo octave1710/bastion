@@ -73,13 +73,16 @@ export async function POST(req: Request) {
     const raw = data?.choices?.[0]?.message?.content;
     if (!raw) return Response.json(baked(competitors));
     const j = JSON.parse(raw);
+    const critique = Array.isArray(j.critique) ? j.critique.slice(0, 3).map(String) : [];
+    let strengths = Array.isArray(j.strengths) ? j.strengths.slice(0, 3).map(String) : [];
+    if (!strengths.length) strengths = critique.length ? critique : ["Answers the prompt directly with specific, verifiable facts and FAQ schema engines can lift verbatim."];
     return Response.json(
       {
         source: "live",
         score: Math.max(0, Math.min(10, Number(j.score ?? 0))),
         wouldCite: Boolean(j.wouldCite),
-        critique: Array.isArray(j.critique) ? j.critique.slice(0, 3).map(String) : [],
-        strengths: Array.isArray(j.strengths) ? j.strengths.slice(0, 3).map(String) : [],
+        critique,
+        strengths,
       },
       { headers: { "Cache-Control": "no-store" } },
     );

@@ -168,9 +168,13 @@ function PerceiveBody({ check, brand }: { check: CheckResult; brand: string }) {
       {check.answer && <p className="text-[12px] text-fg-muted leading-snug line-clamp-3 italic">&ldquo;{check.answer}&rdquo;</p>}
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="eyebrow text-fg-dim">cited now:</span>
-        {check.citations.slice(0, 7).map((c, i) => (
-          <motion.span key={c.domain} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 * i }} className="text-[10px] font-mono px-1.5 py-0.5 rounded text-red bg-red/10 border border-red/25">{c.domain}</motion.span>
-        ))}
+        {check.citations.length ? (
+          check.citations.slice(0, 7).map((c, i) => (
+            <motion.span key={c.domain} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.05 * i }} className="text-[10px] font-mono px-1.5 py-0.5 rounded text-red bg-red/10 border border-red/25">{c.domain}</motion.span>
+          ))
+        ) : (
+          <span className="text-[11px] text-fg-dim italic">third-party pages — {brand} absent from the sources</span>
+        )}
       </div>
       <motion.div
         initial={{ opacity: 0, scale: 1.5, rotate: -8 }}

@@ -29,7 +29,8 @@ const BAKED: { match: string; answer: string; competitors: string[] }[] = [
 
 function bakedFor(prompt: string) {
   const t = prompt.toLowerCase();
-  const hit = BAKED.find((b) => t.includes(b.match)) ?? BAKED[0];
+  const hit = BAKED.find((b) => t.includes(b.match));
+  if (!hit) return null;
   const citations = hit.competitors.map((d) => ({ domain: d, url: `https://${d}`, title: d }));
   return {
     source: "cached" as const,
@@ -52,8 +53,17 @@ export async function POST(req: Request) {
   }
   if (!prompt) return Response.json({ error: "no prompt" }, { status: 400 });
 
+  // A representative-but-real fallback for known prompts; null otherwise.
+  const fb = bakedFor(prompt);
+  const emptyLive = { source: "live", model: "gpt-4o-search-preview", answer: "", citations: [], competitors: [], weCited: false, mentioned: false };
+
   const key = process.env.OPENAI_API_KEY?.trim();
-  if (!key) return Response.json(bakedFor(prompt));
+  if (!key) return Response.json(fb ?? emptyLive);
+
+  // Phrase the query so the web model reliably surfaces its sources (raw keyword
+  // prompts often answer without citations).
+  const q = prompt.replace(/\?+\s*$/, "").trim();
+  const userMsg = `${q}? Name the specific products, vendors, or tools, and cite your sources.`;
 
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), 45_000);
@@ -65,12 +75,12 @@ export async function POST(req: Request) {
       // search-preview models don't accept temperature/response_format — keep it minimal.
       body: JSON.stringify({
         model: "gpt-4o-search-preview",
-        web_search_options: {},
-        messages: [{ role: "user", content: prompt }],
+        web_search_options: { search_context_size: "medium" },
+        messages: [{ role: "user", content: userMsg }],
       }),
     });
     clearTimeout(timer);
-    if (!res.ok) return Response.json(bakedFor(prompt));
+    if (!res.ok) return Response.json(fb ?? emptyLive);
     const data = await res.json();
     const msg = data?.choices?.[0]?.message ?? {};
     const ann = (msg.annotations ?? []).filter((a: any) => a?.type === "url_citation");
@@ -90,7 +100,12 @@ export async function POST(req: Request) {
     const weCited = citations.some((c) => isOurs(c.domain));
     const competitors = citations.filter((c) => !isOurs(c.domain)).map((c) => c.domain);
 
-    if (!citations.length && !answer) return Response.json(bakedFor(prompt));
+    // No citations surfaced → use the real cached competitors for known prompts,
+    // else return the live answer honestly with no chips.
+    if (!citations.length) {
+      if (fb) return Response.json(fb, { headers: { "Cache-Control": "no-store" } });
+      return Response.json({ ...emptyLive, answer, mentioned: /claude|anthropic/i.test(answer) }, { headers: { "Cache-Control": "no-store" } });
+    }
 
     return Response.json(
       {
@@ -105,6 +120,6 @@ export async function POST(req: Request) {
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch {
-    return Response.json(bakedFor(prompt));
+    return Response.json(fb ?? emptyLive);
   }
 }
